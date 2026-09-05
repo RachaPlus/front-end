@@ -1,0 +1,266 @@
+/* =========================================
+   Container — Full Viewport Split
+   ========================================= */
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* =========================================
+   Left — Photo Side
+   ========================================= */
+.photoSide {
+  position: relative;
+  overflow: hidden;
+}
+
+.photo {
+  object-fit: cover;
+  object-position: center top;
+}
+
+.photoOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(10, 12, 10, 0) 60%,
+    rgba(10, 12, 10, 0.6) 100%
+  );
+}
+
+/* =========================================
+   Right — Form Side
+   ========================================= */
+.formSide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  background: var(--color-bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* =========================================
+   Icon
+   ========================================= */
+.iconWrap {
+  width: 56px;
+  height: 56px;
+  background: var(--color-green);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0c0a;
+  box-shadow: 0 0 28px rgba(52, 211, 90, 0.35);
+  flex-shrink: 0;
+}
+
+/* =========================================
+   Header
+   ========================================= */
+.header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+/* =========================================
+   Form
+   ========================================= */
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  letter-spacing: 0.1px;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* When inside wrapper, make room for eye button */
+.inputWrapper .input {
+  padding-right: 44px;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus {
+  border-color: var(--color-green);
+  box-shadow: 0 0 0 3px rgba(52, 211, 90, 0.12);
+}
+
+.input:hover:not(:focus) {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color var(--transition-fast);
+}
+
+.eyeBtn:hover {
+  color: var(--color-text-secondary);
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.forgotLink {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-green);
+  transition: opacity var(--transition-fast);
+}
+
+.forgotLink:hover {
+  opacity: 0.75;
+}
+
+/* =========================================
+   Submit Button
+   ========================================= */
+.submitBtn {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0a0c0a;
+  background: var(--color-green);
+  border: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-base), transform var(--transition-fast), box-shadow var(--transition-base);
+  letter-spacing: 0.1px;
+  margin-top: 4px;
+}
+
+.submitBtn:hover {
+  background: #45e06a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(52, 211, 90, 0.4);
+}
+
+.submitBtn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* =========================================
+   Register Link
+   ========================================= */
+.registerText {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.registerLink {
+  color: var(--color-green);
+  font-weight: 600;
+  transition: opacity var(--transition-fast);
+}
+
+.registerLink:hover {
+  opacity: 0.75;
+}
+
+/* =========================================
+   Animation
+   ========================================= */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   Responsive
+   ========================================= */
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .photoSide {
+    display: none;
+  }
+
+  .formSide {
+    padding: 48px 24px;
+  }
+}
