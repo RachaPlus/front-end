@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent, ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./page.module.css";
@@ -20,6 +21,7 @@ interface FormErrors {
 }
 
 export default function CadastroPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -34,7 +36,6 @@ export default function CadastroPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Limpa o erro do campo assim que o usuário volta a digitar nele
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -74,7 +75,7 @@ export default function CadastroPage() {
 
     if (!validate()) return;
 
-    console.log("Cadastro:", formData);
+    router.push("/menu");
   }
 
   return (

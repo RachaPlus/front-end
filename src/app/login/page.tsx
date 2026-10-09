@@ -1,16 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    router.push("/menu");
+  }
 
   return (
     <div className={styles.container}>
-      {/* ── Left: Sports Photo ── */}
       <div className={styles.photoSide} aria-hidden="true">
         <Image
           src="/basketball-court.jpg"
@@ -23,10 +30,8 @@ export default function LoginPage() {
         <div className={styles.photoOverlay} />
       </div>
 
-      {/* ── Right: Login Form ── */}
       <div className={styles.formSide}>
         <div className={styles.card}>
-          {/* Icon */}
           <div className={styles.iconWrap} aria-hidden="true">
             <svg
               width="28"
@@ -59,8 +64,7 @@ export default function LoginPage() {
             <p className={styles.subtitle}>Entre para gerenciar suas rachas</p>
           </div>
 
-          <form className={styles.form} noValidate>
-            {/* Email */}
+          <form className={styles.form} noValidate onSubmit={handleSubmit}>
             <div className={styles.fieldGroup}>
               <label htmlFor="login-email" className={styles.label}>
                 Email
@@ -74,7 +78,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div className={styles.fieldGroup}>
               <label htmlFor="login-senha" className={styles.label}>
                 Senha
@@ -113,7 +116,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               id="login-submit-btn"
