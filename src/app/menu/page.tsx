@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, FormEvent } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -8,12 +8,14 @@ interface Racha {
   id: string;
   nome: string;
   esporte: string;
-  data: string; 
-  horario: string;
-  local: string;
+  data?: string;
+  horario?: string;
+  local?: string;
   confirmados: number;
-  vagas: number;
+  vagas?: number;
 }
+
+type RachaComData = Racha & { data: string };
 
 const usuarioMock = "Lucas";
 
@@ -49,6 +51,57 @@ const MOCK_RACHAS: Racha[] = [
     vagas: 12,
   },
 ];
+
+const ESPORTES = ["Futebol", "Basquete", "Vôlei"];
+
+function EsporteIcon({ esporte }: { esporte: string }) {
+  const props = {
+    width: 28,
+    height: 28,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    "aria-hidden": true,
+  } as const;
+
+  const traco = {
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  } as const;
+
+  if (esporte === "Futebol") {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="10" {...traco} />
+        <path d="M12 8.5 15.3 10.9 14.1 14.8H9.9L8.7 10.9Z" {...traco} />
+        <path d="M12 8.5V2M15.3 10.9l6.2-2M14.1 14.8 18 20M9.9 14.8 6 20M8.7 10.9l-6.2-2" {...traco} />
+      </svg>
+    );
+  }
+
+  if (esporte === "Basquete") {
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="10" {...traco} />
+        <path d="M12 2v20M2 12h20" {...traco} />
+        <path d="M4.9 4.9c3.5 3 3.5 11.2 0 14.2M19.1 4.9c-3.5 3-3.5 11.2 0 14.2" {...traco} />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...props}>
+      <circle cx="12" cy="12" r="10" {...traco} />
+      <path d="M11.1 7.1a16.55 16.55 0 0 1 10.9 4" {...traco} />
+      <path d="M12 12a12.6 12.6 0 0 1-8.7 5" {...traco} />
+      <path d="M16.8 13.6a16.55 16.55 0 0 1-9 7.5" {...traco} />
+      <path d="M20.7 17a12.8 12.8 0 0 0-8.7-5 13.3 13.3 0 0 1 0-10" {...traco} />
+      <path d="M6.3 3.8a16.55 16.55 0 0 0 1.9 11.5" {...traco} />
+    </svg>
+  );
+}
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MESES = [
@@ -101,9 +154,10 @@ function getIniciais(nome: string) {
 }
 
 export default function MenuPage() {
-  const rachas = MOCK_RACHAS;
+  const [rachas, setRachas] = useState<Racha[]>(MOCK_RACHAS);
 
   const [busca, setBusca] = useState("");
+
   const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [mesVisivel, setMesVisivel] = useState(() => {
     const hoje = new Date();
@@ -111,28 +165,45 @@ export default function MenuPage() {
   });
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
 
+  const [criarAberto, setCriarAberto] = useState(false);
+  const [nomeRacha, setNomeRacha] = useState("");
+  const [esporteSelecionado, setEsporteSelecionado] = useState("");
+  const [erroNome, setErroNome] = useState("");
+  const [erroEsporte, setErroEsporte] = useState("");
+
+  // ── Pesquisa ──
   const rachasFiltradas = useMemo(() => {
     const termo = normalizar(busca.trim());
     if (!termo) return rachas;
     return rachas.filter((r) =>
-      normalizar(`${r.nome} ${r.esporte} ${r.local}`).includes(termo)
+      normalizar(`${r.nome} ${r.esporte} ${r.local ?? ""}`).includes(termo)
     );
   }, [busca, rachas]);
 
+  const rachasComData = useMemo(
+    () => rachas.filter((r): r is RachaComData => Boolean(r.data)),
+    [rachas]
+  );
+
   const rachasPorDia = useMemo(() => {
-    const mapa: Record<string, Racha[]> = {};
-    rachas.forEach((r) => {
+    const mapa: Record<string, RachaComData[]> = {};
+    rachasComData.forEach((r) => {
       if (!mapa[r.data]) mapa[r.data] = [];
       mapa[r.data].push(r);
     });
     return mapa;
-  }, [rachas]);
+  }, [rachasComData]);
+
+  const algumModalAberto = calendarioAberto || criarAberto;
 
   useEffect(() => {
-    if (!calendarioAberto) return;
+    if (!algumModalAberto) return;
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setCalendarioAberto(false);
+      if (e.key === "Escape") {
+        setCalendarioAberto(false);
+        setCriarAberto(false);
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -143,7 +214,7 @@ export default function MenuPage() {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = overflowAnterior;
     };
-  }, [calendarioAberto]);
+  }, [algumModalAberto]);
 
   function abrirCalendario() {
     const hoje = new Date();
@@ -158,6 +229,44 @@ export default function MenuPage() {
       return { ano: d.getFullYear(), mes: d.getMonth() };
     });
     setDiaSelecionado(null);
+  }
+
+  function abrirCriar() {
+    setNomeRacha("");
+    setEsporteSelecionado("");
+    setErroNome("");
+    setErroEsporte("");
+    setCriarAberto(true);
+  }
+
+  function handleCriar(e: FormEvent) {
+    e.preventDefault();
+
+    const nome = nomeRacha.trim();
+    let valido = true;
+
+    if (!nome) {
+      setErroNome("Informe o nome da racha");
+      valido = false;
+    }
+
+    if (!esporteSelecionado) {
+      setErroEsporte("Escolha um esporte");
+      valido = false;
+    }
+
+    if (!valido) return;
+
+    const novaRacha: Racha = {
+      id: String(Date.now()),
+      nome,
+      esporte: esporteSelecionado,
+      confirmados: 1,
+    };
+
+    setRachas((prev) => [novaRacha, ...prev]);
+    setBusca("");
+    setCriarAberto(false);
   }
 
   function handleLogout() {
@@ -176,18 +285,21 @@ export default function MenuPage() {
   const hojeKey = toKey(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
 
   const prefixoMes = `${ano}-${pad(mes + 1)}`;
-  const jogosDoMes = rachas.filter((r) => r.data.startsWith(prefixoMes));
+  const jogosDoMes = rachasComData.filter((r) => r.data.startsWith(prefixoMes));
   const jogosExibidos = (
     diaSelecionado ? (rachasPorDia[diaSelecionado] ?? []) : jogosDoMes
   )
     .slice()
-    .sort((a, b) => (a.data + a.horario).localeCompare(b.data + b.horario));
+    .sort((a, b) =>
+      (a.data + (a.horario ?? "")).localeCompare(b.data + (b.horario ?? ""))
+    );
   const tituloLista = diaSelecionado
     ? `Jogos em ${formatData(diaSelecionado)}`
     : `Jogos de ${MESES[mes]}`;
 
   return (
     <div className={styles.page}>
+      {/* ── Header ── */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <Link href="/menu" className={styles.logo} id="menu-logo">
@@ -222,6 +334,7 @@ export default function MenuPage() {
         </div>
       </header>
 
+      {/* ── Main ── */}
       <main className={styles.main}>
         <section className={styles.welcome}>
           <h1 className={styles.welcomeTitle}>Olá, {usuarioMock} 👋</h1>
@@ -243,15 +356,21 @@ export default function MenuPage() {
               </svg>
               Calendário
             </button>
-            <Link href="/rachas/criar" className={styles.createBtn} id="menu-criar-racha-btn">
+            <button
+              type="button"
+              id="menu-criar-racha-btn"
+              className={styles.createBtn}
+              onClick={abrirCriar}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Criar racha
-            </Link>
+            </button>
           </div>
         </section>
 
+        {/* ── Pesquisa ── */}
         {rachas.length > 0 && (
           <div className={styles.searchWrap}>
             <svg className={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -293,9 +412,14 @@ export default function MenuPage() {
               </svg>
             </div>
             <p className={styles.emptyText}>Você ainda não tem nenhuma racha marcada.</p>
-            <Link href="/rachas/criar" className={styles.emptyCreateLink} id="menu-empty-criar-link">
+            <button
+              type="button"
+              id="menu-empty-criar-link"
+              className={styles.emptyCreateLink}
+              onClick={abrirCriar}
+            >
               Criar minha primeira racha
-            </Link>
+            </button>
           </div>
         ) : rachasFiltradas.length === 0 ? (
           <div className={styles.emptyState}>
@@ -331,27 +455,37 @@ export default function MenuPage() {
                       <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
                       <path d="M3 10h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    {formatData(racha.data)} às {racha.horario}
+                    {racha.data
+                      ? `${formatData(racha.data)}${racha.horario ? ` às ${racha.horario}` : ""}`
+                      : "Data a definir"}
                   </div>
                   <div className={styles.infoRow}>
                     <svg className={styles.infoIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" />
                     </svg>
-                    {racha.local}
+                    {racha.local ?? "Local a definir"}
                   </div>
                 </div>
 
                 <div className={styles.progressWrap}>
-                  <div className={styles.progressBar}>
-                    <div
-                      className={styles.progressFill}
-                      style={{ width: `${(racha.confirmados / racha.vagas) * 100}%` }}
-                    />
-                  </div>
-                  <span className={styles.progressText}>
-                    {racha.confirmados}/{racha.vagas} confirmados
-                  </span>
+                  {racha.vagas ? (
+                    <>
+                      <div className={styles.progressBar}>
+                        <div
+                          className={styles.progressFill}
+                          style={{ width: `${(racha.confirmados / racha.vagas) * 100}%` }}
+                        />
+                      </div>
+                      <span className={styles.progressText}>
+                        {racha.confirmados}/{racha.vagas} confirmados
+                      </span>
+                    </>
+                  ) : (
+                    <span className={styles.progressText}>
+                      {racha.confirmados} {racha.confirmados === 1 ? "confirmado" : "confirmados"}
+                    </span>
+                  )}
                 </div>
               </Link>
             ))}
@@ -359,6 +493,92 @@ export default function MenuPage() {
         )}
       </main>
 
+      {/* ── Modal de Criar Racha ── */}
+      {criarAberto && (
+        <div className={styles.overlay} onClick={() => setCriarAberto(false)}>
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="criar-racha-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h2 id="criar-racha-titulo" className={styles.modalTitle}>
+                Criar nova racha
+              </h2>
+              <button
+                type="button"
+                id="criar-racha-close-btn"
+                className={styles.closeBtn}
+                onClick={() => setCriarAberto(false)}
+                aria-label="Fechar"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+
+            <form className={styles.createForm} noValidate onSubmit={handleCriar}>
+              {/* Nome */}
+              <div className={styles.fieldGroup}>
+                <label htmlFor="criar-racha-nome" className={styles.label}>
+                  Nome da racha
+                </label>
+                <input
+                  id="criar-racha-nome"
+                  type="text"
+                  maxLength={40}
+                  placeholder="Ex: Pelada de Sexta"
+                  autoComplete="off"
+                  autoFocus
+                  className={`${styles.input} ${erroNome ? styles.inputError : ""}`}
+                  value={nomeRacha}
+                  onChange={(e) => {
+                    setNomeRacha(e.target.value);
+                    if (erroNome) setErroNome("");
+                  }}
+                />
+                {erroNome && <span className={styles.errorText}>{erroNome}</span>}
+              </div>
+
+              {/* Esporte */}
+              <fieldset className={styles.fieldset}>
+                <legend className={styles.legend}>Esporte</legend>
+                <div className={styles.sportGrid}>
+                  {ESPORTES.map((esporte) => (
+                    <label key={esporte} className={styles.sportOption}>
+                      <input
+                        type="radio"
+                        name="esporte"
+                        value={esporte}
+                        checked={esporteSelecionado === esporte}
+                        onChange={() => {
+                          setEsporteSelecionado(esporte);
+                          if (erroEsporte) setErroEsporte("");
+                        }}
+                        className={styles.sportRadio}
+                      />
+                      <span className={styles.sportChip}>
+                        <EsporteIcon esporte={esporte} />
+                        <span>{esporte}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {erroEsporte && <span className={styles.errorText}>{erroEsporte}</span>}
+              </fieldset>
+
+              <button type="submit" id="criar-racha-submit-btn" className={styles.submitBtn}>
+                Criar racha
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal do Calendário ── */}
       {calendarioAberto && (
         <div className={styles.overlay} onClick={() => setCalendarioAberto(false)}>
           <div
@@ -457,11 +677,13 @@ export default function MenuPage() {
               ) : (
                 jogosExibidos.map((r) => (
                   <Link href={`/rachas/${r.id}`} key={r.id} className={styles.gameItem}>
-                    <span className={styles.gameTime}>{r.horario}</span>
+                    <span className={styles.gameTime}>{r.horario ?? "--:--"}</span>
                     <span className={styles.gameInfo}>
                       <span className={styles.gameName}>{r.nome}</span>
                       <span className={styles.gameLocal}>
-                        {diaSelecionado ? r.local : `${formatData(r.data)} · ${r.local}`}
+                        {diaSelecionado
+                          ? (r.local ?? "Local a definir")
+                          : `${formatData(r.data)} · ${r.local ?? "Local a definir"}`}
                       </span>
                     </span>
                   </Link>
