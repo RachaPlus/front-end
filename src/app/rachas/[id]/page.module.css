@@ -1,0 +1,771 @@
+/* =========================================
+   Racha Detail & Draw Teams Page Styles
+   ========================================= */
+
+.container {
+  min-height: 100vh;
+  background-color: #0b0d0b;
+  color: #f0f4f0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 1.5rem 3rem 1.5rem;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: #34d35a;
+  color: #0a0c0a;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(52, 211, 90, 0.3);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ── Top Header Navigation Bar ── */
+.topHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background-color: transparent;
+  color: #8a9a8a;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.headerTitleGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.rachaTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.rachaSubtitle {
+  font-size: 0.875rem;
+  color: #8a9a8a;
+  font-weight: 500;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* Toolbar Icons */
+.toolbarIcons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #141714;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: transparent;
+  border: none;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.textActionBtn {
+  background-color: transparent;
+  border: none;
+  color: #d1d5db;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0 0.75rem;
+  height: 36px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.textActionBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Format selector pills (5x5, 6x6, 7x7...) */
+.formatSelector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #141714;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.formatPill {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.formatPill:hover {
+  color: #ffffff;
+}
+
+.formatPillActive {
+  background-color: #34d35a;
+  color: #0a0c0a;
+  font-weight: 800;
+}
+
+.formatPillActive:hover {
+  background-color: #22c55e;
+  color: #0a0c0a;
+}
+
+/* ── Main Layout Grid ── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 2rem;
+  flex: 1;
+}
+
+@media (max-width: 960px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.columnSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+}
+
+.columnTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.timesHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Buttons */
+.btnPrimaryGreen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #34d35a;
+  color: #0a0c0a;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btnPrimaryGreen:hover {
+  background-color: #22c55e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(52, 211, 90, 0.25);
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #1e231e;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+  background-color: #283028;
+  color: #ffffff;
+}
+
+/* ── Players List ── */
+.playersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.playerCard {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background-color: #141714;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.playerCard:hover {
+  border-color: rgba(52, 211, 90, 0.2);
+  background-color: #181c18;
+}
+
+.playerCardUnconfirmed {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
+
+/* Attendance toggle checkbox circle */
+.checkCircleBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #374151;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0c0a;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.checkCircleActive {
+  background-color: #34d35a;
+  border-color: #34d35a;
+}
+
+/* Avatar circle */
+.playerAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #252a25;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.playerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.playerName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.adminCrown {
+  font-size: 0.85rem;
+}
+
+.editBtn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.editBtn:hover {
+  color: #ffffff;
+}
+
+/* Position Badges */
+.posBadge {
+  display: inline-block;
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.posGreen {
+  background-color: rgba(52, 211, 90, 0.14);
+  color: #34d35a;
+  border: 1px solid rgba(52, 211, 90, 0.25);
+}
+
+.posPink {
+  background-color: rgba(244, 63, 94, 0.14);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.posBlue {
+  background-color: rgba(59, 130, 246, 0.14);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.posAmber {
+  background-color: rgba(234, 179, 8, 0.14);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.25);
+}
+
+.playerRatingRight {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.starRating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Empty State Box for Teams (Matches Screenshot) ── */
+.emptyStateBox {
+  background-color: #121512;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.emptyStateIconCircle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.emptyStateText {
+  color: #9ca3af;
+  font-size: 1.05rem;
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+.emptyHighlight {
+  color: #f97316;
+  font-weight: 800;
+}
+
+/* ── Formed Teams View ── */
+.teamsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.teamCard {
+  background-color: #141714;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.teamCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background-color: #191d19;
+  border-left: 4px solid #34d35a;
+}
+
+.teamTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.teamBadgeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.teamName {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.teamAvgRating {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #facc15;
+}
+
+.teamPlayersList {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 0.5rem;
+}
+
+.teamPlayerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background-color: #181c18;
+  border-radius: 8px;
+}
+
+.teamPlayerAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #272d27;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.teamPlayerName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f3f4f6;
+  flex: 1;
+}
+
+.teamPlayerStars {
+  font-size: 0.8rem;
+  color: #facc15;
+  font-weight: 700;
+}
+
+/* ── Modals ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 1rem;
+}
+
+.modalContent {
+  background-color: #141714;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  animation: modalIn 0.25s ease-out;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 1.25rem;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.inputGroup label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.inputGroup input[type="text"],
+.inputGroup select {
+  background-color: #1e231e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  color: #ffffff;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.inputGroup input[type="text"]:focus,
+.inputGroup select:focus {
+  border-color: #34d35a;
+}
+
+.inputGroup input[type="range"] {
+  accent-color: #34d35a;
+  cursor: pointer;
+}
+
+.checkboxGroup {
+  display: flex;
+  align-items: center;
+}
+
+.checkboxGroup label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #d1d5db;
+  cursor: pointer;
+}
+
+.checkboxGroup input[type="checkbox"] {
+  accent-color: #34d35a;
+  width: 18px;
+  height: 18px;
+}
+
+.modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Ranking Modal */
+.rankingModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+}
+
+.rankingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.rankingCard {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background-color: #1c211c;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+}
+
+.rankPosition {
+  font-size: 1.1rem;
+  font-weight: 800;
+  width: 28px;
+  text-align: center;
+}
+
+.rankAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #2d352d;
+  color: #ffffff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rankInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.rankName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.rankPosLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.rankStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.mvpBadge {
+  font-size: 0.8rem;
+  color: #34d35a;
+  font-weight: 700;
+}
+
+.rankRating {
+  font-size: 0.8rem;
+  color: #facc15;
+  font-weight: 700;
+}
+
+/* Timer Display */
+.timerDisplayContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.timerClock {
+  font-size: 4rem;
+  font-weight: 900;
+  font-family: monospace;
+  color: #34d35a;
+  letter-spacing: 2px;
+  background-color: #0d0f0d;
+  padding: 0.5rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(52, 211, 90, 0.2);
+}
+
+.timerPresetRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.timerControls {
+  display: flex;
+  gap: 1rem;
+}
