@@ -1,56 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo, FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getToken, clearToken } from "../../services/tokenService";
+import { ApiError } from "../../services/apiClient";
+import { getCurrentUser } from "../../services/userService";
+import { listarRachas, criarRacha, type Racha } from "../../services/rachaService";
 import styles from "./page.module.css";
 
-interface Racha {
-  id: string;
-  nome: string;
-  esporte: string;
-  data?: string;
-  horario?: string;
-  local?: string;
-  confirmados: number;
-  vagas?: number;
-}
-
 type RachaComData = Racha & { data: string };
-
-const usuarioMock = "Lucas";
-
-const MOCK_RACHAS: Racha[] = [
-  {
-    id: "1",
-    nome: "Pelada de Sexta",
-    esporte: "Futebol",
-    data: "2026-10-09",
-    horario: "19:00",
-    local: "Quadra do Parque",
-    confirmados: 8,
-    vagas: 10,
-  },
-  {
-    id: "2",
-    nome: "Basquete de Domingo",
-    esporte: "Basquete",
-    data: "2026-10-11",
-    horario: "09:00",
-    local: "Ginásio Central",
-    confirmados: 6,
-    vagas: 10,
-  },
-  {
-    id: "3",
-    nome: "Vôlei de Quarta",
-    esporte: "Vôlei",
-    data: "2026-10-14",
-    horario: "20:00",
-    local: "Arena Beira-Mar",
-    confirmados: 9,
-    vagas: 12,
-  },
-];
 
 const ESPORTES = ["Futebol", "Basquete", "Vôlei"];
 
@@ -91,6 +50,7 @@ function EsporteIcon({ esporte }: { esporte: string }) {
     );
   }
 
+  // Vôlei
   return (
     <svg {...props}>
       <circle cx="12" cy="12" r="10" {...traco} />
@@ -137,6 +97,7 @@ function formatData(key: string) {
   return `${DIAS_SEMANA[d.getDay()]}, ${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)}`;
 }
 
+// Remove acentos e deixa minúsculo, pra pesquisa ignorar "ô" vs "o", etc.
 function normalizar(texto: string) {
   return texto
     .toLowerCase()
@@ -154,7 +115,73 @@ function getIniciais(nome: string) {
 }
 
 export default function MenuPage() {
-  const [rachas, setRachas] = useState<Racha[]>(MOCK_RACHAS);
+  const router = useRouter();
+  const [verificandoSessao, setVerificandoSessao] = useState(true);
+  const [nomeUsuario, setNomeUsuario] = useState("");
+
+  const [rachas, setRachas] = useState<Racha[]>([]);
+  const [carregandoRachas, setCarregandoRachas] = useState(true);
+  const [erroRachas, setErroRachas] = useState(false);
+
+  const carregarRachas = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    setCarregandoRachas(true);
+    setErroRachas(false);
+
+    try {
+      setRachas(await listarRachas(token));
+    } catch (falha) {
+      // Token inválido ou expirado: volta para o login
+      if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
+        clearToken();
+        router.replace("/login");
+        return;
+      }
+      setErroRachas(true);
+    } finally {
+      setCarregandoRachas(false);
+    }
+  }, [router]);
+
+  // ── Sessão: exige token e busca o nome do usuário logado ──
+  useEffect(() => {
+    const token = getToken();
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    carregarRachas();
+
+    let cancelado = false;
+
+    getCurrentUser(token)
+      .then((usuario) => {
+        if (cancelado) return;
+        setNomeUsuario(usuario.nome);
+        setVerificandoSessao(false);
+      })
+      .catch((falha) => {
+        if (cancelado) return;
+
+        // Token inválido ou expirado: volta para o login
+        if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
+          clearToken();
+          router.replace("/login");
+          return;
+        }
+
+        // Outro erro (servidor fora do ar, etc.): mostra a tela sem o nome
+        setVerificandoSessao(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [router, carregarRachas]);
 
   const [busca, setBusca] = useState("");
 
@@ -170,6 +197,8 @@ export default function MenuPage() {
   const [esporteSelecionado, setEsporteSelecionado] = useState("");
   const [erroNome, setErroNome] = useState("");
   const [erroEsporte, setErroEsporte] = useState("");
+  const [erroCriar, setErroCriar] = useState("");
+  const [criando, setCriando] = useState(false);
 
   // ── Pesquisa ──
   const rachasFiltradas = useMemo(() => {
@@ -180,6 +209,7 @@ export default function MenuPage() {
     );
   }, [busca, rachas]);
 
+  // ── Calendário ──
   const rachasComData = useMemo(
     () => rachas.filter((r): r is RachaComData => Boolean(r.data)),
     [rachas]
@@ -194,6 +224,7 @@ export default function MenuPage() {
     return mapa;
   }, [rachasComData]);
 
+  // ── Modais: fechar com Esc e travar o scroll da página ──
   const algumModalAberto = calendarioAberto || criarAberto;
 
   useEffect(() => {
@@ -236,10 +267,11 @@ export default function MenuPage() {
     setEsporteSelecionado("");
     setErroNome("");
     setErroEsporte("");
+    setErroCriar("");
     setCriarAberto(true);
   }
 
-  function handleCriar(e: FormEvent) {
+  async function handleCriar(e: FormEvent) {
     e.preventDefault();
 
     const nome = nomeRacha.trim();
@@ -257,20 +289,42 @@ export default function MenuPage() {
 
     if (!valido) return;
 
-    const novaRacha: Racha = {
-      id: String(Date.now()),
-      nome,
-      esporte: esporteSelecionado,
-      confirmados: 1,
-    };
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
 
-    setRachas((prev) => [novaRacha, ...prev]);
+    setCriando(true);
+    setErroCriar("");
+
+    try {
+      await criarRacha(token, nome, esporteSelecionado);
+    } catch (falha) {
+      if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
+        clearToken();
+        router.replace("/login");
+        return;
+      }
+
+      setErroCriar(
+        falha instanceof ApiError && falha.status === 0
+          ? falha.message
+          : "Não foi possível criar a racha. Tente novamente."
+      );
+      setCriando(false);
+      return;
+    }
+
+    setCriando(false);
     setBusca("");
     setCriarAberto(false);
+    await carregarRachas();
   }
 
   function handleLogout() {
-    window.location.href = "/login";
+    clearToken();
+    router.replace("/login");
   }
 
   const { ano, mes } = mesVisivel;
@@ -297,6 +351,13 @@ export default function MenuPage() {
     ? `Jogos em ${formatData(diaSelecionado)}`
     : `Jogos de ${MESES[mes]}`;
 
+  const primeiroNome = nomeUsuario.split(" ")[0];
+
+  // Evita mostrar o menu (e piscar dados) antes de confirmar que há usuário logado
+  if (verificandoSessao) {
+    return <div className={styles.page} />;
+  }
+
   return (
     <div className={styles.page}>
       {/* ── Header ── */}
@@ -319,9 +380,9 @@ export default function MenuPage() {
 
           <div className={styles.userArea}>
             <div className={styles.avatar} aria-hidden="true">
-              {getIniciais(usuarioMock)}
+              {getIniciais(nomeUsuario) || "?"}
             </div>
-            <span className={styles.userName}>{usuarioMock}</span>
+            <span className={styles.userName}>{nomeUsuario}</span>
             <button
               type="button"
               id="menu-logout-btn"
@@ -337,7 +398,9 @@ export default function MenuPage() {
       {/* ── Main ── */}
       <main className={styles.main}>
         <section className={styles.welcome}>
-          <h1 className={styles.welcomeTitle}>Olá, {usuarioMock} 👋</h1>
+          <h1 className={styles.welcomeTitle}>
+            Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋
+          </h1>
           <p className={styles.welcomeSubtitle}>Pronto pra organizar sua próxima racha?</p>
         </section>
 
@@ -403,7 +466,23 @@ export default function MenuPage() {
           </div>
         )}
 
-        {rachas.length === 0 ? (
+        {carregandoRachas ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyText}>Carregando suas rachas...</p>
+          </div>
+        ) : erroRachas ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyText}>Não foi possível carregar suas rachas.</p>
+            <button
+              type="button"
+              id="menu-retry-rachas"
+              className={styles.emptyCreateLink}
+              onClick={carregarRachas}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : rachas.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon} aria-hidden="true">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -570,8 +649,19 @@ export default function MenuPage() {
                 {erroEsporte && <span className={styles.errorText}>{erroEsporte}</span>}
               </fieldset>
 
-              <button type="submit" id="criar-racha-submit-btn" className={styles.submitBtn}>
-                Criar racha
+              {erroCriar && (
+                <p className={styles.apiError} role="alert">
+                  {erroCriar}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                id="criar-racha-submit-btn"
+                className={styles.submitBtn}
+                disabled={criando}
+              >
+                {criando ? "Criando..." : "Criar racha"}
               </button>
             </form>
           </div>
