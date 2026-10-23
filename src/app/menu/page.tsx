@@ -3,10 +3,12 @@
 import { useState, useEffect, useMemo, FormEvent } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
+import { createRacha } from "@/services/rachaService";
 
 interface Racha {
   id: string;
   nome: string;
+  description?: string;
   esporte: string;
   data?: string;
   horario?: string;
@@ -167,16 +169,19 @@ export default function MenuPage() {
 
   const [criarAberto, setCriarAberto] = useState(false);
   const [nomeRacha, setNomeRacha] = useState("");
+  const [descricaoRacha, setDescricaoRacha] = useState("");
   const [esporteSelecionado, setEsporteSelecionado] = useState("");
   const [erroNome, setErroNome] = useState("");
   const [erroEsporte, setErroEsporte] = useState("");
+  const [erroApi, setErroApi] = useState("");
+  const [carregandoCriacao, setCarregandoCriacao] = useState(false);
 
   // ── Pesquisa ──
   const rachasFiltradas = useMemo(() => {
     const termo = normalizar(busca.trim());
     if (!termo) return rachas;
     return rachas.filter((r) =>
-      normalizar(`${r.nome} ${r.esporte} ${r.local ?? ""}`).includes(termo)
+      normalizar(`${r.nome} ${r.esporte} ${r.description ?? ""} ${r.local ?? ""}`).includes(termo)
     );
   }, [busca, rachas]);
 
@@ -233,14 +238,18 @@ export default function MenuPage() {
 
   function abrirCriar() {
     setNomeRacha("");
+    setDescricaoRacha("");
     setEsporteSelecionado("");
     setErroNome("");
     setErroEsporte("");
+    setErroApi("");
+    setCarregandoCriacao(false);
     setCriarAberto(true);
   }
 
-  function handleCriar(e: FormEvent) {
+  async function handleCriar(e: FormEvent) {
     e.preventDefault();
+    setErroApi("");
 
     const nome = nomeRacha.trim();
     let valido = true;
@@ -257,19 +266,49 @@ export default function MenuPage() {
 
     if (!valido) return;
 
-    const novaRacha: Racha = {
-      id: String(Date.now()),
-      nome,
-      esporte: esporteSelecionado,
-      confirmados: 1,
-    };
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setErroApi("Você precisa estar autenticado para criar um racha. Faça login novamente.");
+      return;
+    }
 
-    setRachas((prev) => [novaRacha, ...prev]);
-    setBusca("");
-    setCriarAberto(false);
+    setCarregandoCriacao(true);
+
+    try {
+      const resposta = await createRacha(
+        {
+          name: nome,
+          ...(descricaoRacha.trim() ? { description: descricaoRacha.trim() } : {}),
+        },
+        token
+      );
+
+      const novaRacha: Racha = {
+        id: resposta.id || String(Date.now()),
+        nome: resposta.name || nome,
+        description: resposta.description || descricaoRacha.trim(),
+        esporte: esporteSelecionado,
+        confirmados: 1,
+      };
+
+      setRachas((prev) => [novaRacha, ...prev]);
+      setBusca("");
+      setCriarAberto(false);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErroApi(err.message);
+      } else {
+        setErroApi("Ocorreu um erro ao criar o racha. Tente novamente.");
+      }
+    } finally {
+      setCarregandoCriacao(false);
+    }
   }
 
   function handleLogout() {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
     window.location.href = "/login";
   }
 
@@ -521,31 +560,59 @@ export default function MenuPage() {
             </div>
 
             <form className={styles.createForm} noValidate onSubmit={handleCriar}>
+              {erroApi && (
+                <div className={styles.formGlobalError} role="alert">
+                  {erroApi}
+                </div>
+              )}
+
               {/* Nome */}
               <div className={styles.fieldGroup}>
                 <label htmlFor="criar-racha-nome" className={styles.label}>
-                  Nome da racha
+                  Nome da racha *
                 </label>
                 <input
                   id="criar-racha-nome"
                   type="text"
                   maxLength={40}
-                  placeholder="Ex: Pelada de Sexta"
+                  placeholder="Ex: Pelada de Quinta"
                   autoComplete="off"
                   autoFocus
+                  disabled={carregandoCriacao}
                   className={`${styles.input} ${erroNome ? styles.inputError : ""}`}
                   value={nomeRacha}
                   onChange={(e) => {
                     setNomeRacha(e.target.value);
                     if (erroNome) setErroNome("");
+                    if (erroApi) setErroApi("");
                   }}
                 />
                 {erroNome && <span className={styles.errorText}>{erroNome}</span>}
               </div>
 
+              {/* Descrição */}
+              <div className={styles.fieldGroup}>
+                <label htmlFor="criar-racha-descricao" className={styles.label}>
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  id="criar-racha-descricao"
+                  maxLength={255}
+                  placeholder="Ex: Futebol society toda quinta às 20h na Arena Central"
+                  rows={3}
+                  disabled={carregandoCriacao}
+                  className={styles.textarea}
+                  value={descricaoRacha}
+                  onChange={(e) => {
+                    setDescricaoRacha(e.target.value);
+                    if (erroApi) setErroApi("");
+                  }}
+                />
+              </div>
+
               {/* Esporte */}
               <fieldset className={styles.fieldset}>
-                <legend className={styles.legend}>Esporte</legend>
+                <legend className={styles.legend}>Esporte *</legend>
                 <div className={styles.sportGrid}>
                   {ESPORTES.map((esporte) => (
                     <label key={esporte} className={styles.sportOption}>
@@ -553,10 +620,12 @@ export default function MenuPage() {
                         type="radio"
                         name="esporte"
                         value={esporte}
+                        disabled={carregandoCriacao}
                         checked={esporteSelecionado === esporte}
                         onChange={() => {
                           setEsporteSelecionado(esporte);
                           if (erroEsporte) setErroEsporte("");
+                          if (erroApi) setErroApi("");
                         }}
                         className={styles.sportRadio}
                       />
@@ -570,8 +639,20 @@ export default function MenuPage() {
                 {erroEsporte && <span className={styles.errorText}>{erroEsporte}</span>}
               </fieldset>
 
-              <button type="submit" id="criar-racha-submit-btn" className={styles.submitBtn}>
-                Criar racha
+              <button
+                type="submit"
+                id="criar-racha-submit-btn"
+                className={styles.submitBtn}
+                disabled={carregandoCriacao}
+              >
+                {carregandoCriacao ? (
+                  <>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span>Criando racha...</span>
+                  </>
+                ) : (
+                  "Criar racha"
+                )}
               </button>
             </form>
           </div>
