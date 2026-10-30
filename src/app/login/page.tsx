@@ -1,100 +1,43 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { loginUser } from "../../services/authService";
+import { setToken } from "../../services/tokenService";
 import styles from "./page.module.css";
-import { loginUser } from "@/services/authService";
-
-interface FormErrors {
-  email?: string;
-  senha?: string;
-}
 
 export default function LoginPage() {
   const router = useRouter();
-
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    senha: "",
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSlowLoading, setIsSlowLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [apiSuccess, setApiSuccess] = useState<string | null>(null);
-
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-    if (apiError) {
-      setApiError(null);
-    }
-  }
-
-  function validate(): boolean {
-    const newErrors: FormErrors = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Informe seu email";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Digite um email válido";
-    }
-
-    if (!formData.senha) {
-      newErrors.senha = "Informe sua senha";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setApiError(null);
-    setApiSuccess(null);
+    setErro("");
 
-    if (!validate()) return;
+    if (!email.trim() || !senha) {
+      setErro("Informe seu email e sua senha");
+      return;
+    }
 
-    setIsLoading(true);
-    setIsSlowLoading(false);
-
-    const slowTimer = setTimeout(() => {
-      setIsSlowLoading(true);
-    }, 3000);
+    setCarregando(true);
 
     try {
-      const response = await loginUser({
-        email: formData.email.trim(),
-        senha: formData.senha,
-      });
-
-      // Salva o token retornado pela API no localStorage
-      if (typeof window !== "undefined" && response.token) {
-        localStorage.setItem("token", response.token);
-      }
-
-      setApiSuccess("Login efetuado com sucesso! Redirecionando...");
-
-      setTimeout(() => {
-        router.push("/menu");
-      }, 1000);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setApiError(err.message);
-      } else {
-        setApiError("Ocorreu um erro inesperado ao realizar o login.");
-      }
-    } finally {
-      clearTimeout(slowTimer);
-      setIsLoading(false);
-      setIsSlowLoading(false);
+      const { token } = await loginUser({ email: email.trim(), senha });
+      setToken(token);
+      router.push("/menu");
+    } catch (falha) {
+      setErro(
+        falha instanceof Error
+          ? falha.message
+          : "Não foi possível entrar. Tente novamente."
+      );
+      setCarregando(false);
     }
   }
 
@@ -149,26 +92,6 @@ export default function LoginPage() {
             <p className={styles.subtitle}>Entre para gerenciar suas rachas</p>
           </div>
 
-          {apiError && (
-            <div className={`${styles.alert} ${styles.alertError}`} role="alert" id="login-api-error">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <span>{apiError}</span>
-            </div>
-          )}
-
-          {apiSuccess && (
-            <div className={`${styles.alert} ${styles.alertSuccess}`} role="status" id="login-api-success">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M22 4L12 14.01l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span>{apiSuccess}</span>
-            </div>
-          )}
-
           <form className={styles.form} noValidate onSubmit={handleSubmit}>
             {/* Email */}
             <div className={styles.fieldGroup}>
@@ -177,16 +100,13 @@ export default function LoginPage() {
               </label>
               <input
                 id="login-email"
-                name="email"
                 type="email"
                 placeholder="seu@email.com"
                 autoComplete="email"
-                disabled={isLoading}
-                className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
-                value={formData.email}
-                onChange={handleChange}
+                className={styles.input}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              {errors.email && <span className={styles.errorText}>{errors.email}</span>}
             </div>
 
             {/* Password */}
@@ -197,14 +117,12 @@ export default function LoginPage() {
               <div className={styles.inputWrapper}>
                 <input
                   id="login-senha"
-                  name="senha"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  disabled={isLoading}
-                  className={`${styles.input} ${errors.senha ? styles.inputError : ""}`}
-                  value={formData.senha}
-                  onChange={handleChange}
+                  className={styles.input}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                 />
                 <button
                   type="button"
@@ -212,7 +130,6 @@ export default function LoginPage() {
                   className={styles.eyeBtn}
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -226,7 +143,6 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              {errors.senha && <span className={styles.errorText}>{errors.senha}</span>}
               <div className={styles.forgotRow}>
                 <Link href="/esqueci-senha" className={styles.forgotLink} id="forgot-password-link">
                   Esqueceu sua senha?
@@ -234,29 +150,21 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {erro && (
+              <p className={styles.apiError} role="alert">
+                {erro}
+              </p>
+            )}
+
             {/* Submit */}
-            <div>
-              <button
-                type="submit"
-                id="login-submit-btn"
-                className={styles.submitBtn}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className={styles.spinner} aria-hidden="true" />
-                    Entrando...
-                  </>
-                ) : (
-                  "Entrar"
-                )}
-              </button>
-              {isSlowLoading && (
-                <p className={styles.slowNotice}>
-                  ⏳ O servidor está sendo inicializado. Isso pode levar até 1 minuto no primeiro acesso...
-                </p>
-              )}
-            </div>
+            <button
+              type="submit"
+              id="login-submit-btn"
+              className={styles.submitBtn}
+              disabled={carregando}
+            >
+              {carregando ? "Entrando..." : "Entrar"}
+            </button>
           </form>
 
           <p className={styles.registerText}>

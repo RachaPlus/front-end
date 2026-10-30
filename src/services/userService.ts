@@ -1,3 +1,5 @@
+import { apiRequest } from "./apiClient";
+
 export interface CreateUserDTO {
   nome: string;
   email: string;
@@ -14,7 +16,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.rachaplus.s
 
 export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 65000); // 65s timeout for Render cold start
+  const timeoutId = setTimeout(() => controller.abort(), 65000); 
 
   let response: Response;
 
@@ -52,7 +54,7 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
         errorMessage = errorData.error;
       }
     } catch {
-      // Ignora erro ao parsear JSON
+      
     }
 
     if (!errorMessage) {
@@ -71,4 +73,8 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
   }
 
   return response.json();
+}
+
+export async function getCurrentUser(token: string): Promise<UserResponse> {
+  return apiRequest<UserResponse>("/api/v1/users/me", {}, token);
 }

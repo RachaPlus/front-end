@@ -1,80 +1,119 @@
-export interface CreateRachaDTO {
-  name: string;
-  description?: string;
-}
+import { apiRequest } from "./apiClient";
 
-export interface RachaResponse {
+export interface Racha {
   id: string;
-  name: string;
-  description?: string;
-  createdAt?: string;
+  nome: string;
+  esporte: string;
+  data?: string; 
+  horario?: string; 
+  local?: string;
+  confirmados: number;
+  vagas?: number;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.rachaplus.site";
+type Bruto = Record<string, unknown>;
 
-export async function createRacha(data: CreateRachaDTO, token: string): Promise<RachaResponse> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+function pegar(obj: Bruto, chaves: string[]): unknown {
+  for (const chave of chaves) {
+    const valor = obj[chave];
+    if (valor !== undefined && valor !== null && valor !== "") return valor;
+  }
+  return undefined;
+}
 
-  let response: Response;
+function texto(valor: unknown): string | undefined {
+  return typeof valor === "string" ? valor : undefined;
+}
 
-  try {
-    response = await fetch(`${API_BASE_URL}/api/v1/rachas`, {
+function numero(valor: unknown): number | undefined {
+  return typeof valor === "number" ? valor : undefined;
+}
+
+const ESPORTES_EXIBICAO: Record<string, string> = {
+  futebol: "Futebol",
+  basquete: "Basquete",
+  basquetebol: "Basquete",
+  volei: "Vôlei",
+  voleibol: "Vôlei",
+};
+
+function formatarEsporte(valor: string): string {
+  const chave = valor
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return (
+    ESPORTES_EXIBICAO[chave] ??
+    valor.charAt(0).toUpperCase() + valor.slice(1).toLowerCase()
+  );
+}
+
+function normalizarRacha(bruto: Bruto): Racha {
+  const dataHora = texto(
+    pegar(bruto, ["dataHora", "dataHorario", "dataJogo", "data"])
+  );
+  let horario = texto(pegar(bruto, ["horario", "hora"]));
+  let data: string | undefined;
+
+  if (dataHora) {
+    data = dataHora.slice(0, 10);
+    if (!horario && dataHora.length > 10) horario = dataHora.slice(11, 16);
+  }
+
+  const participantes = bruto["participantes"];
+
+  return {
+    id: String(pegar(bruto, ["id", "uuid"]) ?? ""),
+    nome: texto(pegar(bruto, ["nome", "name", "titulo"])) ?? "Racha sem nome",
+    esporte: formatarEsporte(
+      texto(pegar(bruto, ["esporte", "modalidade", "sport"])) ?? ""
+    ),
+    data,
+    horario: horario?.slice(0, 5),
+    local: texto(pegar(bruto, ["local", "localizacao", "endereco"])),
+    confirmados:
+      numero(
+        pegar(bruto, ["confirmados", "qtdConfirmados", "totalConfirmados"])
+      ) ?? (Array.isArray(participantes) ? participantes.length : 0),
+    vagas: numero(
+      pegar(bruto, ["vagas", "limiteJogadores", "maxJogadores", "numeroVagas"])
+    ),
+  };
+}
+
+export async function listarRachas(token: string): Promise<Racha[]> {
+  const data = await apiRequest<unknown>("/api/v1/rachas", {}, token);
+
+  const lista = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { content?: unknown } | undefined)?.content)
+      ? (data as { content: unknown[] }).content
+      : [];
+
+  return lista.map((item) => normalizarRacha(item as Bruto));
+}
+
+const ESPORTE_PARA_API: Record<string, string> = {
+  Futebol: "FUTEBOL",
+  Basquete: "BASQUETE",
+  Vôlei: "VOLEI",
+};
+
+export async function criarRacha(
+  token: string,
+  nome: string,
+  esporte: string
+): Promise<void> {
+  await apiRequest<unknown>(
+    "/api/v1/rachas",
+    {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify({
-        name: data.name,
-        ...(data.description ? { description: data.description } : {}),
+        nome,
+        esporte: ESPORTE_PARA_API[esporte] ?? esporte.toUpperCase(),
       }),
-      signal: controller.signal,
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Tempo limite esgotado. O servidor demorou muito para responder. Tente novamente.");
-    }
-    console.error("Erro na requisição de criação de racha:", error);
-    throw new Error("Erro de conexão com o servidor. Verifique sua internet e tente novamente.");
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  if (!response.ok) {
-    let errorMessage = "";
-
-    try {
-      const errorData = await response.json();
-      if (typeof errorData === "string") {
-        errorMessage = errorData;
-      } else if (errorData.message) {
-        errorMessage = Array.isArray(errorData.message)
-          ? errorData.message.join(", ")
-          : errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch {
-      // Ignora erro ao decodificar JSON
-    }
-
-    if (!errorMessage) {
-      if (response.status === 401) {
-        errorMessage = "Sua sessão expirou. Faça login novamente.";
-      } else if (response.status === 403) {
-        errorMessage = "Você não tem permissão para realizar esta ação.";
-      } else if (response.status === 400) {
-        errorMessage = "Dados inválidos para criar o racha. Verifique os campos.";
-      } else if (response.status >= 500) {
-        errorMessage = "Erro interno do servidor. Tente novamente mais tarde.";
-      } else {
-        errorMessage = `Erro ao criar racha (código ${response.status}).`;
-      }
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+    },
+    token
+  );
 }
