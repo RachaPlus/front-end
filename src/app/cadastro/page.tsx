@@ -6,18 +6,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { registerUser } from "../../services/userService";
 import { loginUser } from "../../services/authService";
-import { setToken } from "../../services/tokenService";
+import { setToken, setUsername } from "../../services/tokenService";
 import styles from "./page.module.css";
 
 interface FormData {
-  nome: string;
+  username: string;
   email: string;
   senha: string;
   confirmarSenha: string;
 }
 
 interface FormErrors {
-  nome?: string;
+  username?: string;
   email?: string;
   senha?: string;
   confirmarSenha?: string;
@@ -28,7 +28,7 @@ export default function CadastroPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    nome: "",
+    username: "",
     email: "",
     senha: "",
     confirmarSenha: "",
@@ -49,9 +49,14 @@ export default function CadastroPage() {
 
   function validate(): boolean {
     const newErrors: FormErrors = {};
+    const username = formData.username.trim();
 
-    if (!formData.nome.trim()) {
-      newErrors.nome = "Informe seu nome completo";
+    if (!username) {
+      newErrors.username = "Informe um nome de usuário";
+    } else if (username.length < 4 || username.length > 16) {
+      newErrors.username = "O nome de usuário deve ter entre 4 e 16 caracteres";
+    } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
+      newErrors.username = "Use apenas letras, números e _ (sem espaços e sem ponto .)";
     }
 
     if (!formData.email.trim()) {
@@ -62,8 +67,10 @@ export default function CadastroPage() {
 
     if (!formData.senha) {
       newErrors.senha = "Informe uma senha";
-    } else if (formData.senha.length < 6) {
-      newErrors.senha = "A senha deve ter pelo menos 6 caracteres";
+    } else if (formData.senha.length < 8) {
+      newErrors.senha = "A senha deve ter pelo menos 8 caracteres";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(formData.senha)) {
+      newErrors.senha = "A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número";
     }
 
     if (!formData.confirmarSenha) {
@@ -82,13 +89,13 @@ export default function CadastroPage() {
 
     if (!validate()) return;
 
-    const nome = formData.nome.trim();
+    const username = formData.username.trim();
     const email = formData.email.trim();
 
     setCarregando(true);
 
     try {
-      await registerUser({ nome, email, senha: formData.senha });
+      await registerUser({ username, email, senha: formData.senha });
     } catch (falha) {
       setErroApi(
         falha instanceof Error
@@ -100,8 +107,12 @@ export default function CadastroPage() {
     }
 
     try {
-      const { token } = await loginUser({ email, senha: formData.senha });
-      setToken(token);
+      const loginResp = await loginUser({ email, senha: formData.senha });
+      setToken(loginResp.token);
+      const userToSave = loginResp.usuario?.username ?? loginResp.user?.username ?? username;
+      if (userToSave) {
+        setUsername(userToSave);
+      }
       router.push("/menu");
     } catch {
       // Conta criada, mas o login automático falhou: segue para o login manual
@@ -156,22 +167,22 @@ export default function CadastroPage() {
           </div>
 
           <form className={styles.form} noValidate onSubmit={handleSubmit}>
-            {/* Nome */}
+            {/* Username */}
             <div className={styles.fieldGroup}>
-              <label htmlFor="cadastro-nome" className={styles.label}>
-                Nome completo
+              <label htmlFor="cadastro-username" className={styles.label}>
+                Nome de usuário
               </label>
               <input
-                id="cadastro-nome"
-                name="nome"
+                id="cadastro-username"
+                name="username"
                 type="text"
-                placeholder="Seu nome completo"
-                autoComplete="name"
-                className={`${styles.input} ${errors.nome ? styles.inputError : ""}`}
-                value={formData.nome}
+                placeholder="ex: yuri_melo"
+                autoComplete="username"
+                className={`${styles.input} ${errors.username ? styles.inputError : ""}`}
+                value={formData.username}
                 onChange={handleChange}
               />
-              {errors.nome && <span className={styles.errorText}>{errors.nome}</span>}
+              {errors.username && <span className={styles.errorText}>{errors.username}</span>}
             </div>
 
             {/* Email */}

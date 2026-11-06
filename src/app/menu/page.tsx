@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken, clearToken } from "../../services/tokenService";
+import { getToken, clearToken, getUsername, setUsername } from "../../services/tokenService";
 import { ApiError } from "../../services/apiClient";
 import { getCurrentUser } from "../../services/userService";
 import { listarRachas, criarRacha, type Racha } from "../../services/rachaService";
@@ -117,7 +117,7 @@ function getIniciais(nome: string) {
 export default function MenuPage() {
   const router = useRouter();
   const [verificandoSessao, setVerificandoSessao] = useState(true);
-  const [nomeUsuario, setNomeUsuario] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState(() => getUsername() ?? "");
 
   const [rachas, setRachas] = useState<Racha[]>([]);
   const [carregandoRachas, setCarregandoRachas] = useState(true);
@@ -161,7 +161,11 @@ export default function MenuPage() {
     getCurrentUser(token)
       .then((usuario) => {
         if (cancelado) return;
-        setNomeUsuario(usuario.nome);
+        const nomeExibicao = usuario.username || usuario.nome || "";
+        if (nomeExibicao) {
+          setNomeUsuario(nomeExibicao);
+          setUsername(nomeExibicao);
+        }
         setVerificandoSessao(false);
       })
       .catch((falha) => {
@@ -529,7 +533,7 @@ export default function MenuPage() {
         ) : (
           <div className={styles.grid}>
             {rachasFiltradas.map((racha) => (
-              <Link href={`/rachas/${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
+              <Link href={`/racha?id=${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
                 <div className={styles.cardHeader}>
                   <span className={styles.sportBadge}>{racha.esporte}</span>
                 </div>
@@ -807,7 +811,7 @@ export default function MenuPage() {
                 <p className={styles.gamesEmpty}>Nenhum jogo marcado.</p>
               ) : (
                 jogosExibidos.map((r) => (
-                  <Link href={`/rachas/${r.id}`} key={r.id} className={styles.gameItem}>
+                  <Link href={`/racha?id=${r.id}`} key={r.id} className={styles.gameItem}>
                     <span className={styles.gameTime}>{r.horario ?? "--:--"}</span>
                     <span className={styles.gameInfo}>
                       <span className={styles.gameName}>{r.nome}</span>
