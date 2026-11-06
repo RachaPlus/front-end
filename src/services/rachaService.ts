@@ -13,6 +13,19 @@ export interface Racha {
   vagas?: number;
 }
 
+export interface MembroRacha {
+  id: string;
+  nome: string;
+  posicao: string;
+  notaInicial: number;
+}
+
+export interface SalvarMembroDTO {
+  nome: string;
+  posicao: string;
+  notaInicial: number;
+}
+
 type Bruto = Record<string, unknown>;
 
 function pegar(obj: Bruto, chaves: string[]): unknown {
@@ -132,3 +145,101 @@ export async function criarRacha(
 }
 
 export const createRacha = criarRacha;
+
+function normalizarMembro(bruto: Bruto): MembroRacha {
+  const notaBruta = pegar(bruto, ["notaInicial", "nota", "rating", "nivel"]);
+  const notaConvertida =
+    typeof notaBruta === "number"
+      ? notaBruta
+      : typeof notaBruta === "string" && !Number.isNaN(Number(notaBruta))
+        ? Number(notaBruta)
+        : 4;
+
+  return {
+    id: String(pegar(bruto, ["id", "memberId", "uuid"]) ?? ""),
+    nome: texto(pegar(bruto, ["nome", "name", "username"])) ?? "Jogador",
+    posicao: texto(pegar(bruto, ["posicao", "position"])) ?? "",
+    notaInicial: notaConvertida,
+  };
+}
+
+export async function obterRacha(token: string, rachaId: string): Promise<Racha> {
+  const data = await apiRequest<unknown>(`/api/v1/rachas/${rachaId}`, {}, token);
+  return normalizarRacha((data ?? {}) as Bruto);
+}
+
+export async function listarMembros(
+  token: string,
+  rachaId: string
+): Promise<MembroRacha[]> {
+  const data = await apiRequest<unknown>(
+    `/api/v1/rachas/${rachaId}/members`,
+    {},
+    token
+  );
+
+  const lista = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { content?: unknown } | undefined)?.content)
+      ? (data as { content: unknown[] }).content
+      : [];
+
+  return lista.map((item) => normalizarMembro(item as Bruto));
+}
+
+export async function adicionarMembro(
+  token: string,
+  rachaId: string,
+  dados: SalvarMembroDTO
+): Promise<MembroRacha> {
+  const data = await apiRequest<unknown>(
+    `/api/v1/rachas/${rachaId}/members`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        nome: dados.nome,
+        posicao: dados.posicao,
+        notaInicial: dados.notaInicial,
+      }),
+    },
+    token
+  );
+
+  return normalizarMembro(((data ?? dados) as unknown) as Bruto);
+}
+
+export async function atualizarMembro(
+  token: string,
+  rachaId: string,
+  memberId: string,
+  dados: SalvarMembroDTO
+): Promise<MembroRacha> {
+  const data = await apiRequest<unknown>(
+    `/api/v1/rachas/${rachaId}/members/${memberId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        nome: dados.nome,
+        posicao: dados.posicao,
+        notaInicial: dados.notaInicial,
+      }),
+    },
+    token
+  );
+
+  return normalizarMembro(((data ?? { ...dados, id: memberId }) as unknown) as Bruto);
+}
+
+export async function removerMembro(
+  token: string,
+  rachaId: string,
+  memberId: string
+): Promise<void> {
+  await apiRequest<unknown>(
+    `/api/v1/rachas/${rachaId}/members/${memberId}`,
+    {
+      method: "DELETE",
+    },
+    token
+  );
+}

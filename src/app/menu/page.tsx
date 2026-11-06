@@ -528,7 +528,7 @@ export default function MenuPage() {
         ) : (
           <div className={styles.grid}>
             {rachasFiltradas.map((racha) => (
-              <Link href={`/rachas/${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
+              <Link href={`/racha?id=${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
                 <div className={styles.cardHeader}>
                   <span className={styles.sportBadge}>{racha.esporte}</span>
                 </div>
@@ -797,7 +797,7 @@ export default function MenuPage() {
                 <p className={styles.gamesEmpty}>Nenhum jogo marcado.</p>
               ) : (
                 jogosExibidos.map((r) => (
-                  <Link href={`/rachas/${r.id}`} key={r.id} className={styles.gameItem}>
+                  <Link href={`/racha?id=${r.id}`} key={r.id} className={styles.gameItem}>
                     <span className={styles.gameTime}>{r.horario ?? "--:--"}</span>
                     <span className={styles.gameInfo}>
                       <span className={styles.gameName}>{r.nome}</span>
