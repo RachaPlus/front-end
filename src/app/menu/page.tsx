@@ -145,7 +145,7 @@ export default function MenuPage() {
     }
   }, [router]);
 
-  // ── Sessão: exige token e busca o nome do usuário logado ──
+  // ── Sessão: exige o token do login e valida com GET /api/v1/users/me ──
   useEffect(() => {
     const token = getToken();
 
@@ -194,6 +194,7 @@ export default function MenuPage() {
 
   const [criarAberto, setCriarAberto] = useState(false);
   const [nomeRacha, setNomeRacha] = useState("");
+  const [descricaoRacha, setDescricaoRacha] = useState("");
   const [esporteSelecionado, setEsporteSelecionado] = useState("");
   const [erroNome, setErroNome] = useState("");
   const [erroEsporte, setErroEsporte] = useState("");
@@ -205,7 +206,7 @@ export default function MenuPage() {
     const termo = normalizar(busca.trim());
     if (!termo) return rachas;
     return rachas.filter((r) =>
-      normalizar(`${r.nome} ${r.esporte} ${r.local ?? ""}`).includes(termo)
+      normalizar(`${r.nome} ${r.esporte} ${r.descricao ?? ""} ${r.local ?? ""}`).includes(termo)
     );
   }, [busca, rachas]);
 
@@ -264,15 +265,18 @@ export default function MenuPage() {
 
   function abrirCriar() {
     setNomeRacha("");
+    setDescricaoRacha("");
     setEsporteSelecionado("");
     setErroNome("");
     setErroEsporte("");
     setErroCriar("");
+    setCriando(false);
     setCriarAberto(true);
   }
 
   async function handleCriar(e: FormEvent) {
     e.preventDefault();
+    setErroCriar("");
 
     const nome = nomeRacha.trim();
     let valido = true;
@@ -296,10 +300,13 @@ export default function MenuPage() {
     }
 
     setCriando(true);
-    setErroCriar("");
 
     try {
-      await criarRacha(token, nome, esporteSelecionado);
+      await criarRacha(token, {
+        nome,
+        descricao: descricaoRacha.trim(),
+        esporte: esporteSelecionado,
+      });
     } catch (falha) {
       if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
         clearToken();
@@ -307,11 +314,14 @@ export default function MenuPage() {
         return;
       }
 
-      setErroCriar(
-        falha instanceof ApiError && falha.status === 0
-          ? falha.message
-          : "Não foi possível criar a racha. Tente novamente."
-      );
+      if (falha instanceof ApiError && falha.status === 0) {
+        setErroCriar(falha.message);
+      } else if (falha instanceof ApiError && falha.status === 400) {
+        setErroCriar("Dados inválidos para criar a racha. Verifique os campos.");
+      } else {
+        setErroCriar("Não foi possível criar a racha. Tente novamente.");
+      }
+
       setCriando(false);
       return;
     }
@@ -350,8 +360,6 @@ export default function MenuPage() {
   const tituloLista = diaSelecionado
     ? `Jogos em ${formatData(diaSelecionado)}`
     : `Jogos de ${MESES[mes]}`;
-
-  const primeiroNome = nomeUsuario.split(" ")[0];
 
   // Evita mostrar o menu (e piscar dados) antes de confirmar que há usuário logado
   if (verificandoSessao) {
@@ -399,7 +407,7 @@ export default function MenuPage() {
       <main className={styles.main}>
         <section className={styles.welcome}>
           <h1 className={styles.welcomeTitle}>
-            Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋
+            Olá{nomeUsuario ? `, ${nomeUsuario}` : ""} 👋
           </h1>
           <p className={styles.welcomeSubtitle}>Pronto pra organizar sua próxima racha?</p>
         </section>
@@ -443,7 +451,7 @@ export default function MenuPage() {
             <input
               id="menu-search-input"
               type="search"
-              placeholder="Pesquisar por nome, esporte ou local..."
+              placeholder="Pesquisar por nome, descrição, esporte ou local..."
               aria-label="Pesquisar rachas"
               autoComplete="off"
               className={styles.searchInput}
@@ -528,6 +536,8 @@ export default function MenuPage() {
 
                 <h3 className={styles.cardTitle}>{racha.nome}</h3>
 
+                {racha.descricao && <p className={styles.cardDesc}>{racha.descricao}</p>}
+
                 <div className={styles.cardInfo}>
                   <div className={styles.infoRow}>
                     <svg className={styles.infoIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -600,31 +610,59 @@ export default function MenuPage() {
             </div>
 
             <form className={styles.createForm} noValidate onSubmit={handleCriar}>
+              {erroCriar && (
+                <div className={styles.formGlobalError} role="alert">
+                  {erroCriar}
+                </div>
+              )}
+
               {/* Nome */}
               <div className={styles.fieldGroup}>
                 <label htmlFor="criar-racha-nome" className={styles.label}>
-                  Nome da racha
+                  Nome da racha *
                 </label>
                 <input
                   id="criar-racha-nome"
                   type="text"
                   maxLength={40}
-                  placeholder="Ex: Pelada de Sexta"
+                  placeholder="Ex: Pelada de Quinta"
                   autoComplete="off"
                   autoFocus
+                  disabled={criando}
                   className={`${styles.input} ${erroNome ? styles.inputError : ""}`}
                   value={nomeRacha}
                   onChange={(e) => {
                     setNomeRacha(e.target.value);
                     if (erroNome) setErroNome("");
+                    if (erroCriar) setErroCriar("");
                   }}
                 />
                 {erroNome && <span className={styles.errorText}>{erroNome}</span>}
               </div>
 
+              {/* Descrição */}
+              <div className={styles.fieldGroup}>
+                <label htmlFor="criar-racha-descricao" className={styles.label}>
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  id="criar-racha-descricao"
+                  maxLength={255}
+                  placeholder="Ex: Futebol society toda quinta às 20h na Arena Central"
+                  rows={3}
+                  disabled={criando}
+                  className={styles.textarea}
+                  value={descricaoRacha}
+                  onChange={(e) => {
+                    setDescricaoRacha(e.target.value);
+                    if (erroCriar) setErroCriar("");
+                  }}
+                />
+              </div>
+
               {/* Esporte */}
               <fieldset className={styles.fieldset}>
-                <legend className={styles.legend}>Esporte</legend>
+                <legend className={styles.legend}>Esporte *</legend>
                 <div className={styles.sportGrid}>
                   {ESPORTES.map((esporte) => (
                     <label key={esporte} className={styles.sportOption}>
@@ -632,10 +670,12 @@ export default function MenuPage() {
                         type="radio"
                         name="esporte"
                         value={esporte}
+                        disabled={criando}
                         checked={esporteSelecionado === esporte}
                         onChange={() => {
                           setEsporteSelecionado(esporte);
                           if (erroEsporte) setErroEsporte("");
+                          if (erroCriar) setErroCriar("");
                         }}
                         className={styles.sportRadio}
                       />
@@ -649,19 +689,20 @@ export default function MenuPage() {
                 {erroEsporte && <span className={styles.errorText}>{erroEsporte}</span>}
               </fieldset>
 
-              {erroCriar && (
-                <p className={styles.apiError} role="alert">
-                  {erroCriar}
-                </p>
-              )}
-
               <button
                 type="submit"
                 id="criar-racha-submit-btn"
                 className={styles.submitBtn}
                 disabled={criando}
               >
-                {criando ? "Criando..." : "Criar racha"}
+                {criando ? (
+                  <>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span>Criando racha...</span>
+                  </>
+                ) : (
+                  "Criar racha"
+                )}
               </button>
             </form>
           </div>
