@@ -146,14 +146,14 @@ export async function criarRacha(
   dados: NovaRacha
 ): Promise<void> {
   const body: Record<string, string> = {
-    nome,
-    name: nome,
-    esporte: ESPORTE_PARA_API[esporte] ?? esporte.toUpperCase(),
+    nome: dados.nome,
+    name: dados.nome,
+    esporte: ESPORTE_PARA_API[dados.esporte] ?? dados.esporte.toUpperCase(),
   };
 
-  if (descricao?.trim()) {
-    body.descricao = descricao.trim();
-    body.description = descricao.trim();
+  if (dados.descricao?.trim()) {
+    body.descricao = dados.descricao.trim();
+    body.description = dados.descricao.trim();
   }
 
   await apiRequest<unknown>(
@@ -373,10 +373,14 @@ export async function equilibrarTimes(
     {
       method: "POST",
       body: JSON.stringify({
-        nome: dados.nome,
-        // A descrição é opcional no modal: só vai no payload se foi preenchida
-        ...(dados.descricao ? { descricao: dados.descricao } : {}),
-        esporte: ESPORTE_PARA_API[dados.esporte] ?? dados.esporte.toUpperCase(),
+        memberIds,
+        membrosIds: memberIds,
+        jogadoresIds: memberIds,
+        playerIds: memberIds,
+        jogadoresConfirmadosIds: memberIds,
+        jogadoresPorTime,
+        tamanhoTime: jogadoresPorTime,
+        playersPerTeam: jogadoresPorTime,
       }),
     },
     token
