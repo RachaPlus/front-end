@@ -6,8 +6,8 @@ export interface Racha {
   description?: string;
   descricao?: string;
   esporte: string;
-  data?: string;
-  horario?: string;
+  data?: string; 
+  horario?: string; 
   local?: string;
   confirmados: number;
   vagas?: number;
