@@ -381,6 +381,38 @@
   color: #f87171;
 }
 
+.rateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  color: #facc15;
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rateBtn:hover:not(:disabled) {
+  background-color: rgba(250, 204, 21, 0.22);
+  color: #fde047;
+}
+
+.rateBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ovrLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #facc15;
+  margin-left: 4px;
+}
+
 .btnDanger {
   display: inline-flex;
   align-items: center;
