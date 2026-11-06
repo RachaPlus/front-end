@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { loginUser } from "../../services/authService";
-import { setToken } from "../../services/tokenService";
+import { setToken, setUsername } from "../../services/tokenService";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -28,8 +28,12 @@ export default function LoginPage() {
     setCarregando(true);
 
     try {
-      const { token } = await loginUser({ email: email.trim(), senha });
-      setToken(token);
+      const resp = await loginUser({ email: email.trim(), senha });
+      setToken(resp.token);
+      const username = resp.usuario?.username ?? resp.user?.username;
+      if (username) {
+        setUsername(username);
+      }
       router.push("/menu");
     } catch (falha) {
       setErro(

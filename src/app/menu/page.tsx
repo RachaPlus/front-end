@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken, clearToken } from "../../services/tokenService";
+import { getToken, clearToken, getUsername, setUsername } from "../../services/tokenService";
 import { ApiError } from "../../services/apiClient";
 import { getCurrentUser } from "../../services/userService";
 import { listarRachas, criarRacha, type Racha } from "../../services/rachaService";
@@ -117,7 +117,7 @@ function getIniciais(nome: string) {
 export default function MenuPage() {
   const router = useRouter();
   const [verificandoSessao, setVerificandoSessao] = useState(true);
-  const [nomeUsuario, setNomeUsuario] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState(() => getUsername() ?? "");
 
   const [rachas, setRachas] = useState<Racha[]>([]);
   const [carregandoRachas, setCarregandoRachas] = useState(true);
@@ -161,7 +161,11 @@ export default function MenuPage() {
     getCurrentUser(token)
       .then((usuario) => {
         if (cancelado) return;
-        setNomeUsuario(usuario.nome);
+        const nomeExibicao = usuario.username || usuario.nome || "";
+        if (nomeExibicao) {
+          setNomeUsuario(nomeExibicao);
+          setUsername(nomeExibicao);
+        }
         setVerificandoSessao(false);
       })
       .catch((falha) => {
