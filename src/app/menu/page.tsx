@@ -8,7 +8,6 @@ import { ApiError } from "../../services/apiClient";
 import { getCurrentUser } from "../../services/userService";
 import { listarRachas, criarRacha, type Racha } from "../../services/rachaService";
 import styles from "./page.module.css";
-import { createRacha } from "@/services/rachaService";
 
 type RachaComData = Racha & { data: string };
 
@@ -276,7 +275,7 @@ export default function MenuPage() {
 
   async function handleCriar(e: FormEvent) {
     e.preventDefault();
-    setErroApi("");
+    setErroCriar("");
 
     const nome = nomeRacha.trim();
     let valido = true;
@@ -303,7 +302,7 @@ export default function MenuPage() {
     setErroCriar("");
 
     try {
-      await criarRacha(token, nome, esporteSelecionado);
+      await criarRacha(token, nome, esporteSelecionado, descricaoRacha);
     } catch (falha) {
       if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
         clearToken();
@@ -604,12 +603,6 @@ export default function MenuPage() {
             </div>
 
             <form className={styles.createForm} noValidate onSubmit={handleCriar}>
-              {erroApi && (
-                <div className={styles.formGlobalError} role="alert">
-                  {erroApi}
-                </div>
-              )}
-
               {/* Nome */}
               <div className={styles.fieldGroup}>
                 <label htmlFor="criar-racha-nome" className={styles.label}>
@@ -622,13 +615,13 @@ export default function MenuPage() {
                   placeholder="Ex: Pelada de Quinta"
                   autoComplete="off"
                   autoFocus
-                  disabled={carregandoCriacao}
+                  disabled={criando}
                   className={`${styles.input} ${erroNome ? styles.inputError : ""}`}
                   value={nomeRacha}
                   onChange={(e) => {
                     setNomeRacha(e.target.value);
                     if (erroNome) setErroNome("");
-                    if (erroApi) setErroApi("");
+                    if (erroCriar) setErroCriar("");
                   }}
                 />
                 {erroNome && <span className={styles.errorText}>{erroNome}</span>}
@@ -644,12 +637,12 @@ export default function MenuPage() {
                   maxLength={255}
                   placeholder="Ex: Futebol society toda quinta às 20h na Arena Central"
                   rows={3}
-                  disabled={carregandoCriacao}
+                  disabled={criando}
                   className={styles.textarea}
                   value={descricaoRacha}
                   onChange={(e) => {
                     setDescricaoRacha(e.target.value);
-                    if (erroApi) setErroApi("");
+                    if (erroCriar) setErroCriar("");
                   }}
                 />
               </div>
@@ -664,12 +657,12 @@ export default function MenuPage() {
                         type="radio"
                         name="esporte"
                         value={esporte}
-                        disabled={carregandoCriacao}
+                        disabled={criando}
                         checked={esporteSelecionado === esporte}
                         onChange={() => {
                           setEsporteSelecionado(esporte);
                           if (erroEsporte) setErroEsporte("");
-                          if (erroApi) setErroApi("");
+                          if (erroCriar) setErroCriar("");
                         }}
                         className={styles.sportRadio}
                       />

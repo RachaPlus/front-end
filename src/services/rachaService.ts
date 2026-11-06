@@ -3,9 +3,11 @@ import { apiRequest } from "./apiClient";
 export interface Racha {
   id: string;
   nome: string;
+  description?: string;
+  descricao?: string;
   esporte: string;
-  data?: string; 
-  horario?: string; 
+  data?: string;
+  horario?: string;
   local?: string;
   confirmados: number;
   vagas?: number;
@@ -66,6 +68,8 @@ function normalizarRacha(bruto: Bruto): Racha {
   return {
     id: String(pegar(bruto, ["id", "uuid"]) ?? ""),
     nome: texto(pegar(bruto, ["nome", "name", "titulo"])) ?? "Racha sem nome",
+    description: texto(pegar(bruto, ["description", "descricao"])),
+    descricao: texto(pegar(bruto, ["descricao", "description"])),
     esporte: formatarEsporte(
       texto(pegar(bruto, ["esporte", "modalidade", "sport"])) ?? ""
     ),
@@ -103,17 +107,28 @@ const ESPORTE_PARA_API: Record<string, string> = {
 export async function criarRacha(
   token: string,
   nome: string,
-  esporte: string
+  esporte: string,
+  descricao?: string
 ): Promise<void> {
+  const body: Record<string, string> = {
+    nome,
+    name: nome,
+    esporte: ESPORTE_PARA_API[esporte] ?? esporte.toUpperCase(),
+  };
+
+  if (descricao?.trim()) {
+    body.descricao = descricao.trim();
+    body.description = descricao.trim();
+  }
+
   await apiRequest<unknown>(
     "/api/v1/rachas",
     {
       method: "POST",
-      body: JSON.stringify({
-        nome,
-        esporte: ESPORTE_PARA_API[esporte] ?? esporte.toUpperCase(),
-      }),
+      body: JSON.stringify(body),
     },
     token
   );
 }
+
+export const createRacha = criarRacha;
