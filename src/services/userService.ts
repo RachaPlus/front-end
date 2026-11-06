@@ -1,18 +1,18 @@
-import { apiRequest } from "./apiClient";
+import { API_BASE_URL, apiRequest, parseResponseError } from "./apiClient";
 
 export interface CreateUserDTO {
-  nome: string;
+  username: string;
   email: string;
   senha: string;
+  nome?: string;
 }
 
 export interface UserResponse {
   id: string;
-  nome: string;
+  username: string;
   email: string;
+  nome?: string;
 }
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.rachaplus.site";
 
 export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
   const controller = new AbortController();
@@ -26,7 +26,11 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        username: data.username,
+        email: data.email,
+        senha: data.senha,
+      }),
       signal: controller.signal,
     });
   } catch (error: unknown) {
@@ -40,35 +44,7 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
   }
 
   if (!response.ok) {
-    let errorMessage = "";
-
-    try {
-      const errorData = await response.json();
-      if (typeof errorData === "string") {
-        errorMessage = errorData;
-      } else if (errorData.message) {
-        errorMessage = Array.isArray(errorData.message)
-          ? errorData.message.join(", ")
-          : errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch {
-      
-    }
-
-    if (!errorMessage) {
-      if (response.status === 409) {
-        errorMessage = "Este e-mail já está cadastrado.";
-      } else if (response.status === 400) {
-        errorMessage = "Dados inválidos. Verifique as informações e tente novamente.";
-      } else if (response.status >= 500) {
-        errorMessage = "Erro interno do servidor. Tente novamente mais tarde.";
-      } else {
-        errorMessage = `Erro ao realizar cadastro (${response.status}).`;
-      }
-    }
-
+    const errorMessage = await parseResponseError(response, "cadastro");
     throw new Error(errorMessage);
   }
 

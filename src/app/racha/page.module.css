@@ -357,10 +357,102 @@
   justify-content: center;
   border-radius: 4px;
   transition: color 0.15s ease;
+  cursor: pointer;
 }
 
 .editBtn:hover {
   color: #ffffff;
+}
+
+.deleteBtn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  color: #f87171;
+}
+
+.rateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  color: #facc15;
+  font-size: 0.725rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rateBtn:hover:not(:disabled) {
+  background-color: rgba(250, 204, 21, 0.22);
+  color: #fde047;
+}
+
+.rateBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ovrLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #facc15;
+  margin-left: 4px;
+}
+
+.btnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-right: auto;
+}
+
+.btnDanger:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.modalError {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 8px;
+  margin: 0;
+}
+
+.emptyPlayersText {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  background-color: #141714;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
 }
 
 /* Position Badges */

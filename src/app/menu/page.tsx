@@ -3,12 +3,11 @@
 import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getToken, clearToken } from "../../services/tokenService";
+import { getToken, clearToken, getUsername, setUsername } from "../../services/tokenService";
 import { ApiError } from "../../services/apiClient";
 import { getCurrentUser } from "../../services/userService";
 import { listarRachas, criarRacha, type Racha } from "../../services/rachaService";
 import styles from "./page.module.css";
-import { createRacha } from "@/services/rachaService";
 
 type RachaComData = Racha & { data: string };
 
@@ -118,7 +117,7 @@ function getIniciais(nome: string) {
 export default function MenuPage() {
   const router = useRouter();
   const [verificandoSessao, setVerificandoSessao] = useState(true);
-  const [nomeUsuario, setNomeUsuario] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState(() => getUsername() ?? "");
 
   const [rachas, setRachas] = useState<Racha[]>([]);
   const [carregandoRachas, setCarregandoRachas] = useState(true);
@@ -146,7 +145,7 @@ export default function MenuPage() {
     }
   }, [router]);
 
-  // ── Sessão: exige token e busca o nome do usuário logado ──
+  // ── Sessão: exige o token do login e valida com GET /api/v1/users/me ──
   useEffect(() => {
     const token = getToken();
 
@@ -162,7 +161,11 @@ export default function MenuPage() {
     getCurrentUser(token)
       .then((usuario) => {
         if (cancelado) return;
-        setNomeUsuario(usuario.nome);
+        const nomeExibicao = usuario.username || usuario.nome || "";
+        if (nomeExibicao) {
+          setNomeUsuario(nomeExibicao);
+          setUsername(nomeExibicao);
+        }
         setVerificandoSessao(false);
       })
       .catch((falha) => {
@@ -207,7 +210,7 @@ export default function MenuPage() {
     const termo = normalizar(busca.trim());
     if (!termo) return rachas;
     return rachas.filter((r) =>
-      normalizar(`${r.nome} ${r.esporte} ${r.description ?? ""} ${r.local ?? ""}`).includes(termo)
+      normalizar(`${r.nome} ${r.esporte} ${r.descricao ?? ""} ${r.local ?? ""}`).includes(termo)
     );
   }, [busca, rachas]);
 
@@ -271,12 +274,13 @@ export default function MenuPage() {
     setErroNome("");
     setErroEsporte("");
     setErroCriar("");
+    setCriando(false);
     setCriarAberto(true);
   }
 
   async function handleCriar(e: FormEvent) {
     e.preventDefault();
-    setErroApi("");
+    setErroCriar("");
 
     const nome = nomeRacha.trim();
     let valido = true;
@@ -300,10 +304,13 @@ export default function MenuPage() {
     }
 
     setCriando(true);
-    setErroCriar("");
 
     try {
-      await criarRacha(token, nome, esporteSelecionado);
+      await criarRacha(token, {
+        nome,
+        descricao: descricaoRacha.trim(),
+        esporte: esporteSelecionado,
+      });
     } catch (falha) {
       if (falha instanceof ApiError && (falha.status === 401 || falha.status === 403)) {
         clearToken();
@@ -311,11 +318,14 @@ export default function MenuPage() {
         return;
       }
 
-      setErroCriar(
-        falha instanceof ApiError && falha.status === 0
-          ? falha.message
-          : "Não foi possível criar a racha. Tente novamente."
-      );
+      if (falha instanceof ApiError && falha.status === 0) {
+        setErroCriar(falha.message);
+      } else if (falha instanceof ApiError && falha.status === 400) {
+        setErroCriar("Dados inválidos para criar a racha. Verifique os campos.");
+      } else {
+        setErroCriar("Não foi possível criar a racha. Tente novamente.");
+      }
+
       setCriando(false);
       return;
     }
@@ -354,8 +364,6 @@ export default function MenuPage() {
   const tituloLista = diaSelecionado
     ? `Jogos em ${formatData(diaSelecionado)}`
     : `Jogos de ${MESES[mes]}`;
-
-  const primeiroNome = nomeUsuario.split(" ")[0];
 
   // Evita mostrar o menu (e piscar dados) antes de confirmar que há usuário logado
   if (verificandoSessao) {
@@ -403,7 +411,7 @@ export default function MenuPage() {
       <main className={styles.main}>
         <section className={styles.welcome}>
           <h1 className={styles.welcomeTitle}>
-            Olá{primeiroNome ? `, ${primeiroNome}` : ""} 👋
+            Olá{nomeUsuario ? `, ${nomeUsuario}` : ""} 👋
           </h1>
           <p className={styles.welcomeSubtitle}>Pronto pra organizar sua próxima racha?</p>
         </section>
@@ -447,7 +455,7 @@ export default function MenuPage() {
             <input
               id="menu-search-input"
               type="search"
-              placeholder="Pesquisar por nome, esporte ou local..."
+              placeholder="Pesquisar por nome, descrição, esporte ou local..."
               aria-label="Pesquisar rachas"
               autoComplete="off"
               className={styles.searchInput}
@@ -525,12 +533,14 @@ export default function MenuPage() {
         ) : (
           <div className={styles.grid}>
             {rachasFiltradas.map((racha) => (
-              <Link href={`/rachas/${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
+              <Link href={`/racha?id=${racha.id}`} key={racha.id} className={styles.card} id={`racha-card-${racha.id}`}>
                 <div className={styles.cardHeader}>
                   <span className={styles.sportBadge}>{racha.esporte}</span>
                 </div>
 
                 <h3 className={styles.cardTitle}>{racha.nome}</h3>
+
+                {racha.descricao && <p className={styles.cardDesc}>{racha.descricao}</p>}
 
                 <div className={styles.cardInfo}>
                   <div className={styles.infoRow}>
@@ -604,9 +614,9 @@ export default function MenuPage() {
             </div>
 
             <form className={styles.createForm} noValidate onSubmit={handleCriar}>
-              {erroApi && (
+              {erroCriar && (
                 <div className={styles.formGlobalError} role="alert">
-                  {erroApi}
+                  {erroCriar}
                 </div>
               )}
 
@@ -622,13 +632,13 @@ export default function MenuPage() {
                   placeholder="Ex: Pelada de Quinta"
                   autoComplete="off"
                   autoFocus
-                  disabled={carregandoCriacao}
+                  disabled={criando}
                   className={`${styles.input} ${erroNome ? styles.inputError : ""}`}
                   value={nomeRacha}
                   onChange={(e) => {
                     setNomeRacha(e.target.value);
                     if (erroNome) setErroNome("");
-                    if (erroApi) setErroApi("");
+                    if (erroCriar) setErroCriar("");
                   }}
                 />
                 {erroNome && <span className={styles.errorText}>{erroNome}</span>}
@@ -644,12 +654,12 @@ export default function MenuPage() {
                   maxLength={255}
                   placeholder="Ex: Futebol society toda quinta às 20h na Arena Central"
                   rows={3}
-                  disabled={carregandoCriacao}
+                  disabled={criando}
                   className={styles.textarea}
                   value={descricaoRacha}
                   onChange={(e) => {
                     setDescricaoRacha(e.target.value);
-                    if (erroApi) setErroApi("");
+                    if (erroCriar) setErroCriar("");
                   }}
                 />
               </div>
@@ -664,12 +674,12 @@ export default function MenuPage() {
                         type="radio"
                         name="esporte"
                         value={esporte}
-                        disabled={carregandoCriacao}
+                        disabled={criando}
                         checked={esporteSelecionado === esporte}
                         onChange={() => {
                           setEsporteSelecionado(esporte);
                           if (erroEsporte) setErroEsporte("");
-                          if (erroApi) setErroApi("");
+                          if (erroCriar) setErroCriar("");
                         }}
                         className={styles.sportRadio}
                       />
@@ -683,19 +693,20 @@ export default function MenuPage() {
                 {erroEsporte && <span className={styles.errorText}>{erroEsporte}</span>}
               </fieldset>
 
-              {erroCriar && (
-                <p className={styles.apiError} role="alert">
-                  {erroCriar}
-                </p>
-              )}
-
               <button
                 type="submit"
                 id="criar-racha-submit-btn"
                 className={styles.submitBtn}
                 disabled={criando}
               >
-                {criando ? "Criando..." : "Criar racha"}
+                {criando ? (
+                  <>
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span>Criando racha...</span>
+                  </>
+                ) : (
+                  "Criar racha"
+                )}
               </button>
             </form>
           </div>
@@ -800,7 +811,7 @@ export default function MenuPage() {
                 <p className={styles.gamesEmpty}>Nenhum jogo marcado.</p>
               ) : (
                 jogosExibidos.map((r) => (
-                  <Link href={`/rachas/${r.id}`} key={r.id} className={styles.gameItem}>
+                  <Link href={`/racha?id=${r.id}`} key={r.id} className={styles.gameItem}>
                     <span className={styles.gameTime}>{r.horario ?? "--:--"}</span>
                     <span className={styles.gameInfo}>
                       <span className={styles.gameName}>{r.nome}</span>
