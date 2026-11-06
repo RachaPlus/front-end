@@ -6,7 +6,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { registerUser } from "../../services/userService";
 import { loginUser } from "../../services/authService";
-import { setToken, setUsername } from "../../services/tokenService";
+import {
+  setToken,
+  setUsername,
+  DEMO_TOKEN,
+  DEMO_USERNAME,
+} from "../../services/tokenService";
 import styles from "./page.module.css";
 
 interface FormData {
@@ -118,6 +123,12 @@ export default function CadastroPage() {
       // Conta criada, mas o login automático falhou: segue para o login manual
       router.push("/login");
     }
+  }
+
+  function handleDemoLogin() {
+    setToken(DEMO_TOKEN);
+    setUsername(DEMO_USERNAME);
+    router.push("/menu");
   }
 
   return (
@@ -317,6 +328,15 @@ export default function CadastroPage() {
               disabled={carregando}
             >
               {carregando ? "Criando conta..." : "Criar conta"}
+            </button>
+
+            <button
+              type="button"
+              id="cadastro-demo-btn"
+              className={styles.demoBtn}
+              onClick={handleDemoLogin}
+            >
+              ⚡ Entrar no Modo Demo
             </button>
           </form>
 

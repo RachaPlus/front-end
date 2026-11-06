@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { loginUser } from "../../services/authService";
-import { setToken, setUsername } from "../../services/tokenService";
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  DEMO_TOKEN,
+  DEMO_USERNAME,
+  setToken,
+  setUsername,
+} from "../../services/tokenService";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -15,6 +22,14 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  function handleDemoLogin() {
+    setEmail(DEMO_EMAIL);
+    setSenha(DEMO_PASSWORD);
+    setToken(DEMO_TOKEN);
+    setUsername(DEMO_USERNAME);
+    router.push("/menu");
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -169,6 +184,21 @@ export default function LoginPage() {
             >
               {carregando ? "Entrando..." : "Entrar"}
             </button>
+
+            <div className={styles.demoBox}>
+              <button
+                type="button"
+                id="login-demo-btn"
+                className={styles.demoBtn}
+                onClick={handleDemoLogin}
+              >
+                ⚡ Entrar no Modo Demo
+              </button>
+              <span className={styles.demoHint}>
+                Credenciais demo: <code>{DEMO_EMAIL}</code> /{" "}
+                <code>{DEMO_PASSWORD}</code>
+              </span>
+            </div>
           </form>
 
           <p className={styles.registerText}>

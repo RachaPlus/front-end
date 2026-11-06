@@ -1,4 +1,10 @@
 import { API_BASE_URL, parseResponseError } from "./apiClient";
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  DEMO_TOKEN,
+  DEMO_USERNAME,
+} from "./tokenService";
 
 export interface LoginDTO {
   email: string;
@@ -17,6 +23,17 @@ export interface LoginResponse {
 }
 
 export async function loginUser(data: LoginDTO): Promise<LoginResponse> {
+  const emailNormalizado = data.email.trim().toLowerCase();
+  if (
+    (emailNormalizado === DEMO_EMAIL || emailNormalizado === "demo") &&
+    (data.senha === DEMO_PASSWORD || data.senha === "demo")
+  ) {
+    return {
+      token: DEMO_TOKEN,
+      usuario: { username: DEMO_USERNAME },
+    };
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 65000); // 65s timeout for Render cold start
 

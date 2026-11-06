@@ -1,4 +1,5 @@
 import { API_BASE_URL, apiRequest, parseResponseError } from "./apiClient";
+import { DEMO_EMAIL, DEMO_USERNAME, isDemoToken } from "./tokenService";
 
 export interface CreateUserDTO {
   username: string;
@@ -52,5 +53,13 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
 }
 
 export async function getCurrentUser(token: string): Promise<UserResponse> {
+  if (isDemoToken(token)) {
+    return {
+      id: "demo-user-id",
+      username: DEMO_USERNAME,
+      email: DEMO_EMAIL,
+      nome: "Usuário Demo",
+    };
+  }
   return apiRequest<UserResponse>("/api/v1/users/me", {}, token);
 }

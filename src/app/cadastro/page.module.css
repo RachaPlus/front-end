@@ -248,3 +248,20 @@
   transform: none;
   box-shadow: none;
 }
+
+.demoBtn {
+  width: 100%;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-green);
+  background: rgba(52, 211, 90, 0.12);
+  border: 1px solid rgba(52, 211, 90, 0.35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.demoBtn:hover {
+  background: rgba(52, 211, 90, 0.22);
+}
