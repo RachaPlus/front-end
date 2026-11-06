@@ -3,11 +3,10 @@ import { apiRequest, ApiError } from "./apiClient";
 export interface Racha {
   id: string;
   nome: string;
-  description?: string;
   descricao?: string;
   esporte: string;
-  data?: string; 
-  horario?: string; 
+  data?: string; // formato ISO: AAAA-MM-DD
+  horario?: string; // HH:MM
   local?: string;
   confirmados: number;
   vagas?: number;
@@ -42,6 +41,7 @@ export interface ResultadoEquilibrioTimes {
 
 type Bruto = Record<string, unknown>;
 
+// Pega o primeiro campo existente entre vários nomes possíveis
 function pegar(obj: Bruto, chaves: string[]): unknown {
   for (const chave of chaves) {
     const valor = obj[chave];
@@ -66,6 +66,7 @@ const ESPORTES_EXIBICAO: Record<string, string> = {
   voleibol: "Vôlei",
 };
 
+// "FUTEBOL" / "volei" / "Vôlei" → "Futebol" / "Vôlei"
 function formatarEsporte(valor: string): string {
   const chave = valor
     .toLowerCase()
@@ -78,6 +79,7 @@ function formatarEsporte(valor: string): string {
   );
 }
 
+// Converte o JSON da API para o formato usado nos cards
 function normalizarRacha(bruto: Bruto): Racha {
   const dataHora = texto(
     pegar(bruto, ["dataHora", "dataHorario", "dataJogo", "data"])
@@ -95,7 +97,6 @@ function normalizarRacha(bruto: Bruto): Racha {
   return {
     id: String(pegar(bruto, ["id", "uuid"]) ?? ""),
     nome: texto(pegar(bruto, ["nome", "name", "titulo"])) ?? "Racha sem nome",
-    description: texto(pegar(bruto, ["description", "descricao"])),
     descricao: texto(pegar(bruto, ["descricao", "description"])),
     esporte: formatarEsporte(
       texto(pegar(bruto, ["esporte", "modalidade", "sport"])) ?? ""
@@ -113,6 +114,7 @@ function normalizarRacha(bruto: Bruto): Racha {
   };
 }
 
+// GET /api/v1/rachas  →  lista de rachas (array ou página { content: [...] })
 export async function listarRachas(token: string): Promise<Racha[]> {
   const data = await apiRequest<unknown>("/api/v1/rachas", {}, token);
 
@@ -125,17 +127,23 @@ export async function listarRachas(token: string): Promise<Racha[]> {
   return lista.map((item) => normalizarRacha(item as Bruto));
 }
 
+// Esporte como aparece no modal → valor enviado para a API
 const ESPORTE_PARA_API: Record<string, string> = {
   Futebol: "FUTEBOL",
   Basquete: "BASQUETE",
   Vôlei: "VOLEI",
 };
 
+export interface NovaRacha {
+  nome: string;
+  descricao?: string;
+  esporte: string;
+}
+
+// POST /api/v1/rachas  →  { nome, descricao, esporte }
 export async function criarRacha(
   token: string,
-  nome: string,
-  esporte: string,
-  descricao?: string
+  dados: NovaRacha
 ): Promise<void> {
   const body: Record<string, string> = {
     nome,
@@ -365,14 +373,10 @@ export async function equilibrarTimes(
     {
       method: "POST",
       body: JSON.stringify({
-        memberIds,
-        membrosIds: memberIds,
-        jogadoresIds: memberIds,
-        playerIds: memberIds,
-        jogadoresConfirmadosIds: memberIds,
-        jogadoresPorTime,
-        tamanhoTime: jogadoresPorTime,
-        playersPerTeam: jogadoresPorTime,
+        nome: dados.nome,
+        // A descrição é opcional no modal: só vai no payload se foi preenchida
+        ...(dados.descricao ? { descricao: dados.descricao } : {}),
+        esporte: ESPORTE_PARA_API[dados.esporte] ?? dados.esporte.toUpperCase(),
       }),
     },
     token
