@@ -1,11 +1,10 @@
-import { API_BASE_URL, apiRequest, parseResponseError } from "./apiClient";
+import { API_BASE_URL, ApiError, apiRequest, parseApiError } from "./apiClient";
 import { DEMO_EMAIL, DEMO_USERNAME, isDemoToken } from "./tokenService";
 
 export interface CreateUserDTO {
   username: string;
   email: string;
   senha: string;
-  nome?: string;
 }
 
 export interface UserResponse {
@@ -17,7 +16,7 @@ export interface UserResponse {
 
 export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 65000); 
+  const timeoutId = setTimeout(() => controller.abort(), 65000);
 
   let response: Response;
 
@@ -26,6 +25,7 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         username: data.username,
@@ -36,20 +36,31 @@ export async function registerUser(data: CreateUserDTO): Promise<UserResponse> {
     });
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Tempo limite esgotado. O servidor demorou muito para responder. Tente novamente.");
+      throw new ApiError(
+        0,
+        "Tempo limite esgotado. O servidor demorou muito para responder. Tente novamente."
+      );
     }
     console.error("Erro na requisição de cadastro:", error);
-    throw new Error("Erro de conexão com o servidor. Verifique sua internet e tente novamente.");
+    throw new ApiError(
+      0,
+      "Erro de conexão com o servidor. Verifique sua internet e tente novamente."
+    );
   } finally {
     clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
-    const errorMessage = await parseResponseError(response, "cadastro");
-    throw new Error(errorMessage);
+    const { message, fieldErrors } = await parseApiError(response, "cadastro");
+    throw new ApiError(response.status, message, fieldErrors);
   }
 
-  return response.json();
+  const texto = await response.text();
+  return (
+    texto
+      ? JSON.parse(texto)
+      : { id: "", username: data.username, email: data.email }
+  ) as UserResponse;
 }
 
 export async function getCurrentUser(token: string): Promise<UserResponse> {

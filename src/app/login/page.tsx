@@ -35,15 +35,29 @@ export default function LoginPage() {
     e.preventDefault();
     setErro("");
 
-    if (!email.trim() || !senha) {
+    const emailLimpo = email.trim();
+    if (!emailLimpo || !senha) {
       setErro("Informe seu email e sua senha");
+      return;
+    }
+
+    if (
+      emailLimpo.toLowerCase() !== "demo" &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)
+    ) {
+      setErro("Digite um email válido");
+      return;
+    }
+
+    if (senha.length > 72 || new TextEncoder().encode(senha).length > 72) {
+      setErro("A senha deve ter no máximo 72 caracteres");
       return;
     }
 
     setCarregando(true);
 
     try {
-      const resp = await loginUser({ email: email.trim(), senha });
+      const resp = await loginUser({ email: emailLimpo, senha });
       setToken(resp.token);
       const username = resp.usuario?.username ?? resp.user?.username;
       if (username) {

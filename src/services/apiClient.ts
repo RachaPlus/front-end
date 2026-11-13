@@ -3,17 +3,41 @@ export const API_BASE_URL =
 
 export class ApiError extends Error {
   status: number;
+  fieldErrors?: Record<string, string>;
 
-  constructor(status: number, message: string) {
+  constructor(
+    status: number,
+    message: string,
+    fieldErrors?: Record<string, string>
+  ) {
     super(message);
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
-export async function parseResponseError(
+export interface ParsedApiError {
+  message: string;
+  fieldErrors?: Record<string, string>;
+}
+
+export async function parseApiError(
   response: Response,
   contexto?: "login" | "cadastro" | "geral"
-): Promise<string> {
+): Promise<ParsedApiError> {
+  if (response.status >= 500) {
+    return {
+      message:
+        "Ocorreu um erro no servidor. Tente novamente em instantes ou verifique os dados informados",
+    };
+  }
+
+  if (response.status === 409) {
+    return {
+      message: "Este e-mail ou nome de usuário já está em uso",
+    };
+  }
+
   let rawText = "";
   try {
     rawText = await response.text();
@@ -22,6 +46,7 @@ export async function parseResponseError(
   }
 
   let errorMessage = "";
+  const fieldErrors: Record<string, string> = {};
 
   if (rawText && rawText.trim()) {
     try {
@@ -35,7 +60,14 @@ export async function parseResponseError(
               const obj = item as Record<string, unknown>;
               const mensagem = obj.mensagem ?? obj.message;
               const campo = obj.campo ?? obj.field;
-              if (campo && mensagem) return `${campo}: ${mensagem}`;
+              if (campo && mensagem) {
+                const campoStr = String(campo);
+                const msgStr = String(mensagem);
+                fieldErrors[campoStr] = fieldErrors[campoStr]
+                  ? `${fieldErrors[campoStr]}; ${msgStr}`
+                  : msgStr;
+                return `${campoStr}: ${msgStr}`;
+              }
               if (mensagem) return String(mensagem);
             }
             return JSON.stringify(item);
@@ -48,7 +80,13 @@ export async function parseResponseError(
       } else if (parsed && typeof parsed === "object") {
         const obj = parsed as Record<string, unknown>;
         if (obj.mensagem) {
-          errorMessage = obj.campo ? `${obj.campo}: ${obj.mensagem}` : String(obj.mensagem);
+          const msgStr = String(obj.mensagem);
+          if (obj.campo) {
+            fieldErrors[String(obj.campo)] = msgStr;
+            errorMessage = `${obj.campo}: ${msgStr}`;
+          } else {
+            errorMessage = msgStr;
+          }
         } else if (obj.message) {
           errorMessage = Array.isArray(obj.message)
             ? obj.message.join(", ")
@@ -60,7 +98,7 @@ export async function parseResponseError(
         errorMessage = parsed;
       }
     } catch {
-      // Texto puro retornado pelo Spring Boot (ex: status 409 ou mensagem direta)
+      // Texto puro retornado pelo Spring Boot
       const textoLimpo = rawText.trim();
       if (!textoLimpo.startsWith("<html") && !textoLimpo.startsWith("<!DOCTYPE")) {
         errorMessage = textoLimpo;
@@ -69,22 +107,32 @@ export async function parseResponseError(
   }
 
   if (!errorMessage) {
-    if (contexto === "login" && (response.status === 401 || response.status === 400 || response.status === 403)) {
+    if (
+      contexto === "login" &&
+      (response.status === 401 || response.status === 400 || response.status === 403)
+    ) {
       errorMessage = "E-mail ou senha incorretos.";
-    } else if (response.status === 409) {
-      errorMessage = "Este usuário ou e-mail já está cadastrado.";
     } else if (response.status === 400) {
       errorMessage = "Dados inválidos. Verifique as informações e tente novamente.";
     } else if (response.status === 401 || response.status === 403) {
       errorMessage = "Acesso não autorizado.";
-    } else if (response.status >= 500) {
-      errorMessage = "Erro interno do servidor. Tente novamente mais tarde.";
     } else {
       errorMessage = `Erro ao processar requisição (${response.status}).`;
     }
   }
 
-  return errorMessage;
+  return {
+    message: errorMessage,
+    fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+  };
+}
+
+export async function parseResponseError(
+  response: Response,
+  contexto?: "login" | "cadastro" | "geral"
+): Promise<string> {
+  const { message } = await parseApiError(response, contexto);
+  return message;
 }
 
 export async function apiRequest<T>(
@@ -102,6 +150,7 @@ export async function apiRequest<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
@@ -123,8 +172,8 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const errorMessage = await parseResponseError(response, "geral");
-    throw new ApiError(response.status, errorMessage);
+    const { message, fieldErrors } = await parseApiError(response, "geral");
+    throw new ApiError(response.status, message, fieldErrors);
   }
 
   const texto = await response.text();

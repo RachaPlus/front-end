@@ -4,6 +4,7 @@ import { useState, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { ApiError } from "../../services/apiClient";
 import { registerUser } from "../../services/userService";
 import { loginUser } from "../../services/authService";
 import {
@@ -55,6 +56,8 @@ export default function CadastroPage() {
   function validate(): boolean {
     const newErrors: FormErrors = {};
     const username = formData.username.trim();
+    const email = formData.email.trim();
+    const senhaBytes = new TextEncoder().encode(formData.senha).length;
 
     if (!username) {
       newErrors.username = "Informe um nome de usuário";
@@ -64,9 +67,9 @@ export default function CadastroPage() {
       newErrors.username = "Use apenas letras, números e _ (sem espaços e sem ponto .)";
     }
 
-    if (!formData.email.trim()) {
+    if (!email) {
       newErrors.email = "Informe seu email";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Digite um email válido";
     }
 
@@ -74,6 +77,8 @@ export default function CadastroPage() {
       newErrors.senha = "Informe uma senha";
     } else if (formData.senha.length < 8) {
       newErrors.senha = "A senha deve ter pelo menos 8 caracteres";
+    } else if (formData.senha.length > 72 || senhaBytes > 72) {
+      newErrors.senha = "A senha deve ter no máximo 72 caracteres";
     } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(formData.senha)) {
       newErrors.senha = "A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número";
     }
@@ -102,11 +107,36 @@ export default function CadastroPage() {
     try {
       await registerUser({ username, email, senha: formData.senha });
     } catch (falha) {
-      setErroApi(
-        falha instanceof Error
-          ? falha.message
-          : "Não foi possível criar a conta. Tente novamente."
-      );
+      if (falha instanceof ApiError && falha.status === 400 && falha.fieldErrors) {
+        const mappedErrors: FormErrors = {};
+        const unmappedMessages: string[] = [];
+
+        for (const [campo, mensagem] of Object.entries(falha.fieldErrors)) {
+          if (
+            campo === "username" ||
+            campo === "email" ||
+            campo === "senha" ||
+            campo === "confirmarSenha"
+          ) {
+            mappedErrors[campo] = mensagem;
+          } else {
+            unmappedMessages.push(`${campo}: ${mensagem}`);
+          }
+        }
+
+        if (Object.keys(mappedErrors).length > 0) {
+          setErrors((prev) => ({ ...prev, ...mappedErrors }));
+        }
+        if (unmappedMessages.length > 0 || Object.keys(mappedErrors).length === 0) {
+          setErroApi(unmappedMessages.join(", ") || falha.message);
+        }
+      } else {
+        setErroApi(
+          falha instanceof Error
+            ? falha.message
+            : "Não foi possível criar a conta. Tente novamente."
+        );
+      }
       setCarregando(false);
       return;
     }

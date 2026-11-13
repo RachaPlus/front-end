@@ -1,4 +1,4 @@
-import { API_BASE_URL, parseResponseError } from "./apiClient";
+import { API_BASE_URL, ApiError, parseApiError } from "./apiClient";
 import {
   DEMO_EMAIL,
   DEMO_PASSWORD,
@@ -44,23 +44,33 @@ export async function loginUser(data: LoginDTO): Promise<LoginResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        email: data.email,
+        senha: data.senha,
+      }),
       signal: controller.signal,
     });
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Tempo limite esgotado. O servidor demorou muito para responder. Tente novamente.");
+      throw new ApiError(
+        0,
+        "Tempo limite esgotado. O servidor demorou muito para responder. Tente novamente."
+      );
     }
     console.error("Erro na requisição de login:", error);
-    throw new Error("Erro de conexão com o servidor. Verifique sua internet e tente novamente.");
+    throw new ApiError(
+      0,
+      "Erro de conexão com o servidor. Verifique sua internet e tente novamente."
+    );
   } finally {
     clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
-    const errorMessage = await parseResponseError(response, "login");
-    throw new Error(errorMessage);
+    const { message, fieldErrors } = await parseApiError(response, "login");
+    throw new ApiError(response.status, message, fieldErrors);
   }
 
   return response.json();
